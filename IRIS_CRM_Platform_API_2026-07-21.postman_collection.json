@@ -1,0 +1,1221 @@
+{
+  "info": {
+    "name": "IRIS CRM Platform API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Sales Module (Module 1 of 8) — Identity/RBAC + Sales endpoints"
+  },
+  "item": [
+    {
+      "name": "Quotations",
+      "item": [
+        {
+          "name": "Create a draft quotation for an opportunity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/quotations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "quotations"
+              ]
+            },
+            "description": "Create a draft quotation for an opportunity",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"opportunityId\": \"string\",\n  \"validTill\": \"2026-01-01T00:00:00.000Z\",\n  \"lines\": [\n    {\n      \"catalogItemId\": \"string\",\n      \"description\": \"IP Camera 4MP x8\",\n      \"qty\": 8,\n      \"unitPrice\": 5000,\n      \"discount\": 1000,\n      \"taxRatePct\": 18\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create a new version of a quotation (prior versions stay immutable)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/quotations/:id/revise",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "quotations",
+                ":id",
+                "revise"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Create a new version of a quotation (prior versions stay immutable)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"validTill\": \"2026-01-01T00:00:00.000Z\",\n  \"lines\": [\n    {\n      \"catalogItemId\": \"string\",\n      \"description\": \"IP Camera 4MP x8\",\n      \"qty\": 8,\n      \"unitPrice\": 5000,\n      \"discount\": 1000,\n      \"taxRatePct\": 18\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit a draft for issue — self-approves if within the caller's limit, else PENDING_APPROVAL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/quotations/:id/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "quotations",
+                ":id",
+                "submit"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Submit a draft for issue — self-approves if within the caller's limit, else PENDING_APPROVAL"
+          },
+          "response": []
+        },
+        {
+          "name": "Approve a pending quotation (role-gated by approval limit / override authority)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/quotations/:id/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "quotations",
+                ":id",
+                "approve"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Approve a pending quotation (role-gated by approval limit / override authority)"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject a pending quotation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/quotations/:id/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "quotations",
+                ":id",
+                "reject"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Reject a pending quotation"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark an approved quotation as sent to the customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/quotations/:id/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "quotations",
+                ":id",
+                "send"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Mark an approved quotation as sent to the customer"
+          },
+          "response": []
+        },
+        {
+          "name": "List all quotation versions for an opportunity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/opportunities/:opportunityId/quotations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "opportunities",
+                ":opportunityId",
+                "quotations"
+              ],
+              "variable": [
+                {
+                  "key": "opportunityId",
+                  "value": "opportunityId_example"
+                }
+              ]
+            },
+            "description": "List all quotation versions for an opportunity"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Opportunities",
+      "item": [
+        {
+          "name": "List opportunities visible to the caller (own / team / region / all by role)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/opportunities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "opportunities"
+              ]
+            },
+            "description": "List opportunities visible to the caller (own / team / region / all by role)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get one opportunity with stage history and quotations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/opportunities/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "opportunities",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Get one opportunity with stage history and quotations"
+          },
+          "response": []
+        },
+        {
+          "name": "Move the opportunity to the next pipeline stage (audited, SM-2.2)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/opportunities/:id/stage",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "opportunities",
+                ":id",
+                "stage"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Move the opportunity to the next pipeline stage (audited, SM-2.2)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toStage\": \"CONTACTED\",\n  \"remark\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reassign the opportunity owner (Manager+ only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/opportunities/:id/reassign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "opportunities",
+                ":id",
+                "reassign"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Reassign the opportunity owner (Manager+ only)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark the opportunity Lost with a mandatory reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/opportunities/:id/lost",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "opportunities",
+                ":id",
+                "lost"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Mark the opportunity Lost with a mandatory reason",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Lost to competitor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Close Won — creates the AmcContract or Project hand-off record (SM-4.1, SM-5.4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/opportunities/:id/win",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "opportunities",
+                ":id",
+                "win"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Close Won — creates the AmcContract or Project hand-off record (SM-4.1, SM-5.4)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"site\": \"Acme HQ, Sector 21\",\n  \"timeline\": \"2 weeks\",\n  \"customerId\": \"string\",\n  \"bom\": [\n    {\n      \"catalogItemId\": \"string\",\n      \"qty\": 1.23\n    }\n  ],\n  \"amcType\": \"COMPREHENSIVE\",\n  \"amcFrequency\": \"MONTHLY\",\n  \"amcStartDate\": \"2026-01-01T00:00:00.000Z\",\n  \"amcEndDate\": \"2026-01-01T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Leads",
+      "item": [
+        {
+          "name": "List leads visible to the caller (own / team / region / all by role)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leads"
+              ]
+            },
+            "description": "List leads visible to the caller (own / team / region / all by role)"
+          },
+          "response": []
+        },
+        {
+          "name": "Capture a lead (SM-1.1..SM-1.6)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leads"
+              ]
+            },
+            "description": "Capture a lead (SM-1.1..SM-1.6)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contactName\": \"Acme Corp\",\n  \"companyName\": \"string\",\n  \"contactPhone\": \"9999999999\",\n  \"contactEmail\": \"buyer@acme.com\",\n  \"source\": \"WEB_FORM\",\n  \"productInterest\": \"CCTV\",\n  \"notes\": \"string\",\n  \"regionId\": \"string\",\n  \"ownerId\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get one lead with follow-up history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leads/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leads",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Get one lead with follow-up history"
+          },
+          "response": []
+        },
+        {
+          "name": "Log a follow-up (call/meeting/email) with an optional next-action reminder (SM-1.9, SM-1.10)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leads/:id/follow-ups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leads",
+                ":id",
+                "follow-ups"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Log a follow-up (call/meeting/email) with an optional next-action reminder (SM-1.9, SM-1.10)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Discussed pricing, sending quote\",\n  \"channel\": \"call\",\n  \"nextActionAt\": \"2026-01-01T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark a lead Lost with a mandatory reason (SM-1.11)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leads/:id/lost",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leads",
+                ":id",
+                "lost"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Mark a lead Lost with a mandatory reason (SM-1.11)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"price\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Convert a lead into an Opportunity (SM-1.7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leads/:id/qualify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leads",
+                ":id",
+                "qualify"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Convert a lead into an Opportunity (SM-1.7)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dealType\": \"INSTALLATION\",\n  \"value\": 40000,\n  \"expectedClose\": \"2026-01-01T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "List active catalog items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "items"
+              ]
+            },
+            "description": "List active catalog items"
+          },
+          "response": []
+        },
+        {
+          "name": "Create a catalog item (Super Admin only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "items"
+              ]
+            },
+            "description": "Create a catalog item (Super Admin only)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CAM-001\",\n  \"name\": \"IP Camera 4MP\",\n  \"category\": \"CCTV\",\n  \"unit\": \"pcs\",\n  \"basePrice\": 5000,\n  \"taxClass\": \"GST18\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update a catalog item (Super Admin only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/items/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "items",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Update a catalog item (Super Admin only)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"category\": \"string\",\n  \"unit\": \"string\",\n  \"basePrice\": 1.23,\n  \"taxClass\": \"string\",\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resolve the effective price for an item in the caller's (or a given) region",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/items/:id/price",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "items",
+                ":id",
+                "price"
+              ],
+              "query": [
+                {
+                  "key": "regionId",
+                  "value": "regionId_example",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Resolve the effective price for an item in the caller's (or a given) region"
+          },
+          "response": []
+        },
+        {
+          "name": "Create a price rule for a catalog item (Super Admin manages, Regional Admin approves)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/price-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "price-rules"
+              ]
+            },
+            "description": "Create a price rule for a catalog item (Super Admin manages, Regional Admin approves)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catalogItemId\": \"string\",\n  \"regionId\": \"string\",\n  \"ruleType\": \"PROMOTIONAL\",\n  \"value\": 10,\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000Z\",\n  \"effectiveTo\": \"2026-01-01T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Identity",
+      "item": [
+        {
+          "name": "List regions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/regions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "regions"
+              ]
+            },
+            "description": "List regions"
+          },
+          "response": []
+        },
+        {
+          "name": "Create a region (Super Admin only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/regions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "regions"
+              ]
+            },
+            "description": "Create a region (Super Admin only)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"GGN\",\n  \"name\": \"Gurugram\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login with email/password, returns JWT access + refresh tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with email/password, returns JWT access + refresh tokens",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@iris.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Exchange a refresh token for a new access token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Exchange a refresh token for a new access token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List users in caller's region (Super Admin sees all)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "List users in caller's region (Super Admin sees all)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create a user (Super Admin, or Regional Admin within own region)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Create a user (Super Admin, or Regional Admin within own region)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahul Exec\",\n  \"email\": \"rahul@iris.local\",\n  \"password\": \"Password123!\",\n  \"role\": \"SALES_EXECUTIVE\",\n  \"regionId\": \"string\",\n  \"reportingToId\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Effective permissions for a user (role defaults + overrides applied)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id",
+                "permissions"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Effective permissions for a user (role defaults + overrides applied)"
+          },
+          "response": []
+        },
+        {
+          "name": "Grant or deny one permission key for one user (feature-level override)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id/permission-overrides",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id",
+                "permission-overrides"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                }
+              ]
+            },
+            "description": "Grant or deny one permission key for one user (feature-level override)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissionKey\": \"sales.opportunity.reassign\",\n  \"effect\": \"GRANT\",\n  \"reason\": \"trusted exec, temp coverage\",\n  \"expiresAt\": \"2026-01-01T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove a permission override, reverting the user to their role default",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id/permission-overrides/:permissionKey",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id",
+                "permission-overrides",
+                ":permissionKey"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "id_example"
+                },
+                {
+                  "key": "permissionKey",
+                  "value": "permissionKey_example"
+                }
+              ]
+            },
+            "description": "Remove a permission override, reverting the user to their role default"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1"
+    },
+    {
+      "key": "bearerToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  }
+}
