@@ -278,7 +278,51 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List opportunities visible to the caller (own / team / region / all by role) */
+        /** List opportunities visible to the caller (own / team / region / all by role), paginated */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                    sortBy?: "createdAt" | "updatedAt" | "value" | "expectedClose";
+                    sortOrder?: "asc" | "desc";
+                    stage?: "NEW" | "CONTACTED" | "QUOTED" | "NEGOTIATION" | "WON" | "LOST";
+                    dealType?: "INSTALLATION" | "AMC" | "PRODUCT";
+                    ownerId?: string;
+                    dateFrom?: string;
+                    dateTo?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated result: { data: { items, total, page, pageSize, totalPages } } */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opportunities/summary/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pipeline value / weighted forecast / open count across all open (non-Won/Lost) opportunities in scope */
         get: {
             parameters: {
                 query?: never;
@@ -531,6 +575,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/opportunities/{id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List comments on an opportunity */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Add a comment to an opportunity */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body: string;
+                        isInternalNote?: boolean;
+                        mentionedUserIds?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opportunities/{id}/comments/{commentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Soft-delete an opportunity comment (Super Admin only) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    commentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Edit an opportunity comment (Super Admin only — comments are a permanent audit trail) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    commentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/leads": {
         parameters: {
             query?: never;
@@ -538,17 +710,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List leads visible to the caller (own / team / region / all by role) */
+        /** List leads visible to the caller (own / team / region / all by role), paginated */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                    sortBy?: "createdAt" | "updatedAt" | "contactName";
+                    sortOrder?: "asc" | "desc";
+                    status?: "NEW" | "QUALIFIED" | "LOST";
+                    source?: string;
+                    productInterest?: string;
+                    ownerId?: string;
+                    /** @description Matches contactName / companyName / contactPhone / contactEmail */
+                    search?: string;
+                    dateFrom?: string;
+                    dateTo?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description OK */
+                /** @description Paginated result: { data: { items, total, page, pageSize, totalPages } } */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -579,20 +764,29 @@ export interface paths {
                         contactPhone?: string;
                         /** @example buyer@acme.com */
                         contactEmail?: string;
+                        /** @description Contact/company address, max 500 characters */
+                        address?: string;
                         /** @example 28.4595 */
                         gpsLatitude?: number;
                         /** @example 77.0266 */
                         gpsLongitude?: number;
+                        /** @description Reverse-geocoded label for gpsLatitude/gpsLongitude */
+                        visitLocation?: string;
                         /**
                          * @description Code of an active Lead Source picklist option (GET /picklists?listType=LEAD_SOURCE) — admin-managed, not a fixed enum.
                          * @example WEB_FORM
                          */
                         source: string;
+                        /** @description Required when source is OTHER */
+                        sourceOther?: string;
                         /**
                          * @description Code of an active Product Interest picklist option (GET /picklists?listType=PRODUCT_INTEREST), optional.
                          * @example CCTV_INSTALLATION
                          */
                         productInterest?: string;
+                        /** @description Required when productInterest is OTHER */
+                        productInterestOther?: string;
+                        /** @description Max 400 characters */
                         notes?: string;
                         /** @description Admin override only */
                         regionId?: string;
@@ -611,6 +805,42 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/status-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-status lead counts visible to the caller, optionally narrowed to one owner (admin "leads by user" view) */
+        get: {
+            parameters: {
+                query?: {
+                    ownerId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Array of { status, count } */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -799,6 +1029,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/{id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List comments on a lead */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Add a comment to a lead */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body: string;
+                        isInternalNote?: boolean;
+                        mentionedUserIds?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/comments/{commentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Soft-delete a lead comment (Super Admin only) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    commentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Edit a lead comment (Super Admin only — comments are a permanent audit trail) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    commentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/catalog/items": {
         parameters: {
             query?: never;
@@ -806,17 +1164,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List active catalog items */
+        /** List catalog items, paginated */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                    sortBy?: "name" | "basePrice" | "createdAt" | "category";
+                    sortOrder?: "asc" | "desc";
+                    category?: string;
+                    taxClass?: string;
+                    active?: boolean;
+                    /** @description Matches code / name */
+                    search?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description OK */
+                /** @description Paginated result: { data: { items, total, page, pageSize, totalPages } } */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1349,6 +1717,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/regions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Activate or deactivate a region (Super Admin only) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        active: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -1446,17 +1856,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List users in caller's region (Super Admin sees all) */
+        /** List users in caller's region (Super Admin sees all), paginated */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                    sortBy?: "createdAt" | "name" | "email";
+                    sortOrder?: "asc" | "desc";
+                    role?: "SUPER_ADMIN" | "REGIONAL_ADMIN" | "SALES_MANAGER" | "SALES_EXECUTIVE" | "AUDITOR";
+                    regionId?: string;
+                    status?: "ACTIVE" | "INACTIVE";
+                    /** @description Matches name / email */
+                    search?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description OK */
+                /** @description Paginated result: { data: { items, total, page, pageSize, totalPages } } */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1663,6 +2083,86 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Activate or deactivate a user (Super Admin, or Regional Admin within own region) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "ACTIVE" | "INACTIVE";
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/geo/reverse-geocode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reverse-geocode a lat/lng pair into a human-readable address label (proxies OSM Nominatim) */
+        get: {
+            parameters: {
+                query: {
+                    lat: number;
+                    lng: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

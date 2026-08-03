@@ -39,6 +39,18 @@ export async function listLeads(filters: ListLeadsFilters = {}): Promise<Paginat
   return data;
 }
 
+export interface LeadStatusCount {
+  status: LeadStatus;
+  count: number;
+}
+
+export async function getLeadStatusSummary(ownerId?: string): Promise<LeadStatusCount[]> {
+  const { data } = await apiClient.get<LeadStatusCount[]>("/leads/status-summary", {
+    params: ownerId ? { ownerId } : undefined,
+  });
+  return data;
+}
+
 export async function getLead(id: string): Promise<Lead> {
   const { data } = await apiClient.get<Lead>(`/leads/${id}`);
   return data;

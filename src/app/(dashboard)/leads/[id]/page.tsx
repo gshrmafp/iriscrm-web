@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, leadStatusTone } from "@/components/status-badge";
 import { useLead } from "@/features/leads/hooks";
 import { usePicklistLabelResolver } from "@/features/picklists/hooks";
+import { useUserDirectory } from "@/features/identity/hooks";
 import { FollowUpTimeline } from "@/features/leads/components/follow-up-timeline";
 import { LogFollowUpDialog } from "@/features/leads/components/log-follow-up-dialog";
 import { QualifyLeadDialog } from "@/features/leads/components/qualify-lead-dialog";
@@ -20,10 +21,14 @@ export default function LeadDetailPage({
   const { id } = use(params);
   const { data: lead, isLoading } = useLead(id);
   const resolveLabel = usePicklistLabelResolver();
+  const { data: users = [] } = useUserDirectory();
 
   if (isLoading || !lead) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
+
+  const creatorName = users.find((u) => u.id === lead.createdBy)?.name ?? lead.createdBy;
+  const hasGps = lead.gpsLatitude != null && lead.gpsLongitude != null;
 
   const isOpen = lead.status === "NEW";
 
@@ -63,12 +68,39 @@ export default function LeadDetailPage({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Source</span>
-              <span>{resolveLabel("LEAD_SOURCE", lead.source)}</span>
+              <span>
+                {lead.source === "OTHER" && lead.sourceOther
+                  ? lead.sourceOther
+                  : resolveLabel("LEAD_SOURCE", lead.source)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Product interest</span>
-              <span>{resolveLabel("PRODUCT_INTEREST", lead.productInterest) || "—"}</span>
+              <span>
+                {lead.productInterest === "OTHER" && lead.productInterestOther
+                  ? lead.productInterestOther
+                  : resolveLabel("PRODUCT_INTEREST", lead.productInterest) || "—"}
+              </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Created by</span>
+              <span>{creatorName}</span>
+            </div>
+            {lead.address ? (
+              <div>
+                <p className="text-muted-foreground">Address</p>
+                <p>{lead.address}</p>
+              </div>
+            ) : null}
+            {hasGps ? (
+              <div>
+                <p className="text-muted-foreground">Visit location</p>
+                <p>{lead.visitLocation || "Address unavailable for these coordinates"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {Number(lead.gpsLatitude).toFixed(5)}, {Number(lead.gpsLongitude).toFixed(5)}
+                </p>
+              </div>
+            ) : null}
             {lead.lostReason ? (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Lost reason</span>

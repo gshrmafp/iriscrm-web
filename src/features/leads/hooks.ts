@@ -22,6 +22,13 @@ export function useLead(id: string) {
   });
 }
 
+export function useLeadStatusSummary(ownerId?: string) {
+  return useQuery({
+    queryKey: ["leads", "status-summary", ownerId ?? null],
+    queryFn: () => api.getLeadStatusSummary(ownerId),
+  });
+}
+
 export function useCreateLead() {
   const queryClient = useQueryClient();
   return useMutation({

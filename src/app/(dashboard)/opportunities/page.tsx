@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
@@ -11,10 +11,18 @@ import {
   StatusBadge,
   opportunityStageTone,
 } from "@/components/status-badge";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { PipelineBoard } from "@/features/opportunities/components/pipeline-board";
 import { useOpportunities } from "@/features/opportunities/hooks";
+import { useUserDirectory } from "@/features/identity/hooks";
+import { useAuth } from "@/features/auth/AuthProvider";
 import type { ListOpportunitiesFilters } from "@/features/opportunities/api";
 import type { Opportunity } from "@/types/entities";
+
+// Same scoping as the Leads page: admins/managers already see the whole
+// region's opportunities server-side — this only controls whether the
+// "view on behalf of a user" filter is shown.
+const CAN_FILTER_BY_OWNER: string[] = ["SUPER_ADMIN", "REGIONAL_ADMIN", "SALES_MANAGER"];
 
 const columns: ColumnDef<Opportunity>[] = [
   { accessorKey: "dealType", header: "Deal type" },
@@ -49,6 +57,13 @@ export default function OpportunitiesPage() {
   const [filters, setFilters] = useState<ListOpportunitiesFilters>(DEFAULT_FILTERS);
   const { data, isLoading } = useOpportunities(filters);
   const router = useRouter();
+  const { user } = useAuth();
+  const { data: users = [] } = useUserDirectory();
+  const canFilterByOwner = !!user && CAN_FILTER_BY_OWNER.includes(user.role);
+  const userOptions: ComboboxOption[] = useMemo(
+    () => users.map((u) => ({ value: u.id, label: u.name, description: u.email })),
+    [users],
+  );
 
   return (
     <div>
@@ -56,6 +71,19 @@ export default function OpportunitiesPage() {
         title="Opportunities"
         description="Pipeline of qualified deals moving toward Won or Lost."
       />
+      {canFilterByOwner ? (
+        <div className="mb-4 w-full max-w-xs">
+          <Combobox
+            items={userOptions}
+            value={filters.ownerId ?? null}
+            onValueChange={(value) =>
+              setFilters((prev) => ({ ...prev, ownerId: value ?? undefined, page: 1 }))
+            }
+            placeholder="View opportunities by user…"
+            emptyMessage="No users found."
+          />
+        </div>
+      ) : null}
       <Tabs defaultValue="board">
         <TabsList>
           <TabsTrigger value="board">Board</TabsTrigger>
