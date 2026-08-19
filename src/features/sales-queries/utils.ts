@@ -20,15 +20,17 @@ export type ActivityEvent =
     }
   | { id: string; type: "ATTACHMENT"; createdAt: string; attachment: QueryAttachment };
 
-function flattenComments(comments: QueryComment[]): QueryComment[] {
-  return comments.flatMap((comment) => [comment, ...flattenComments(comment.replies ?? [])]);
-}
-
 // Merges comments, status/assignment activity, and top-level attachments into
 // one chronological feed — mirrors follow-up-timeline.tsx/stage-history.tsx's
 // single-type timelines, generalized to a tagged union of event types.
+//
+// Only top-level comments become their own feed entries; each comment's
+// `replies` are rendered nested inside it (see CommentEvent in
+// activity-timeline.tsx) rather than flattened as sibling feed items, so a
+// reply visually stays attached to its thread instead of floating loose in
+// chronological order.
 export function buildActivityFeed(query: SalesQuery): ActivityEvent[] {
-  const commentEvents: ActivityEvent[] = flattenComments(query.comments ?? []).map((comment) => ({
+  const commentEvents: ActivityEvent[] = (query.comments ?? []).map((comment) => ({
     id: `comment-${comment.id}`,
     type: "COMMENT",
     createdAt: comment.createdAt,

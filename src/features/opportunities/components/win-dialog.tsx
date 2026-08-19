@@ -42,9 +42,14 @@ interface FormValues {
 export function WinDialog({
   opportunityId,
   dealType,
+  triggerRender,
+  triggerContent,
 }: {
   opportunityId: string;
   dealType: DealType;
+  /** Custom trigger element (e.g. a compact icon button for use inside a card) — defaults to a plain Button. */
+  triggerRender?: React.ReactElement;
+  triggerContent?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const winOpportunity = useWinOpportunity(opportunityId);
@@ -107,7 +112,9 @@ export function WinDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>Mark Won</DialogTrigger>
+      <DialogTrigger render={triggerRender ?? <Button />}>
+        {triggerContent ?? "Mark Won"}
+      </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Close Won</DialogTitle>

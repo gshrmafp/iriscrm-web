@@ -61,3 +61,11 @@ export function queryPriorityTone(priority: string) {
   if (priority === "LOW") return "neutral" as const;
   return "info" as const;
 }
+
+export function followUpStatusTone(status: string) {
+  if (status === "COMPLETED") return "success" as const;
+  if (status === "OVERDUE") return "danger" as const;
+  if (status === "CANCELLED") return "neutral" as const;
+  if (status === "RESCHEDULED") return "warning" as const;
+  return "info" as const;
+}

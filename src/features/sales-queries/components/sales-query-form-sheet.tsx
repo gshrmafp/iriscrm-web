@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,9 +26,10 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
-import { useCreateSalesQuery } from "@/features/sales-queries/hooks";
+import { useCreateSalesQuery, useUpdateSalesQuery } from "@/features/sales-queries/hooks";
 import { MEETING_TYPE_OPTIONS, PRIORITY_OPTIONS } from "@/features/sales-queries/constants";
 import { getApiErrorMessage } from "@/lib/api-client";
+import type { SalesQuery } from "@/types/entities";
 
 const salesQuerySchema = z.object({
   customerName: z.string().min(1, "Customer name is required"),
@@ -46,9 +47,31 @@ const salesQuerySchema = z.object({
 
 type SalesQueryFormValues = z.infer<typeof salesQuerySchema>;
 
-export function SalesQueryFormSheet() {
+function toDefaultValues(query?: SalesQuery): Partial<SalesQueryFormValues> {
+  if (!query) return { meetingType: "WALK_IN", priority: "MEDIUM" };
+  return {
+    customerName: query.customerName,
+    companyName: query.companyName ?? undefined,
+    contactPhone: query.contactPhone ?? undefined,
+    contactEmail: query.contactEmail ?? undefined,
+    meetingType: query.meetingType,
+    visitDate: query.visitDate ? query.visitDate.slice(0, 10) : undefined,
+    visitLocation: query.visitLocation ?? undefined,
+    requirement: query.requirement,
+    priority: query.priority,
+    productInterest: query.productInterest ?? undefined,
+    estimatedValue: query.estimatedValue ?? undefined,
+  };
+}
+
+// Handles both creating a new query (default) and editing an existing one
+// (pass `query`) — the two flows share every field, differing only in which
+// mutation fires and how the sheet is triggered/titled.
+export function SalesQueryFormSheet({ query }: { query?: SalesQuery }) {
   const [open, setOpen] = useState(false);
+  const isEdit = !!query;
   const createQuery = useCreateSalesQuery();
+  const updateQuery = useUpdateSalesQuery(query?.id ?? "");
 
   const {
     register,
@@ -59,34 +82,42 @@ export function SalesQueryFormSheet() {
     formState: { errors },
   } = useForm<SalesQueryFormValues>({
     resolver: zodResolver(salesQuerySchema),
-    defaultValues: { meetingType: "WALK_IN", priority: "MEDIUM" },
+    defaultValues: toDefaultValues(query),
   });
 
   async function onSubmit(values: SalesQueryFormValues) {
+    const payload = {
+      ...values,
+      contactEmail: values.contactEmail || undefined,
+      visitDate: values.visitDate ? new Date(values.visitDate).toISOString() : undefined,
+      estimatedValue: values.estimatedValue ? Number(values.estimatedValue) : undefined,
+    };
     try {
-      await createQuery.mutateAsync({
-        ...values,
-        contactEmail: values.contactEmail || undefined,
-        visitDate: values.visitDate ? new Date(values.visitDate).toISOString() : undefined,
-        estimatedValue: values.estimatedValue ? Number(values.estimatedValue) : undefined,
-      });
-      toast.success("Query captured");
-      reset();
+      if (isEdit) {
+        await updateQuery.mutateAsync(payload);
+        toast.success("Query updated");
+      } else {
+        await createQuery.mutateAsync(payload);
+        toast.success("Query captured");
+        reset();
+      }
       setOpen(false);
     } catch (error) {
       toast.error(getApiErrorMessage(error));
     }
   }
 
+  const isPending = isEdit ? updateQuery.isPending : createQuery.isPending;
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button />}>
-        <Plus className="size-4" />
-        New Query
+      <SheetTrigger render={<Button variant={isEdit ? "outline" : "default"} />}>
+        {isEdit ? <Pencil className="size-4" /> : <Plus className="size-4" />}
+        {isEdit ? "Edit" : "New Query"}
       </SheetTrigger>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Capture a customer query</SheetTitle>
+          <SheetTitle>{isEdit ? "Edit query" : "Capture a customer query"}</SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 px-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -187,8 +218,8 @@ export function SalesQueryFormSheet() {
           </div>
 
           <SheetFooter className="px-0">
-            <Button type="submit" disabled={createQuery.isPending}>
-              {createQuery.isPending ? "Saving…" : "Save query"}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Saving…" : "Save query"}
             </Button>
             <SheetClose render={<Button type="button" variant="outline" />}>
               Cancel

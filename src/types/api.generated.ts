@@ -322,10 +322,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Pipeline value / weighted forecast / open count across all open (non-Won/Lost) opportunities in scope */
+        /** Per-stage counts/values, pipeline value, and weighted forecast across the caller's scope, optionally narrowed to one owner */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    ownerId?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;

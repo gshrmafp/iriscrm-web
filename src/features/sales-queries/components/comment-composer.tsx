@@ -15,7 +15,19 @@ import { getApiErrorMessage } from "@/lib/api-client";
 // this app, so mentions are detected with a trailing "@partial" regex against
 // the textarea value and resolved against the (typically small) visible-user
 // list — a full caret-relative popup is left for a later iteration.
-export function CommentComposer({ queryId }: { queryId: string }) {
+export function CommentComposer({
+  queryId,
+  parentId,
+  compact = false,
+  onPosted,
+}: {
+  queryId: string;
+  /** Set when this composer is a reply to an existing top-level comment. */
+  parentId?: string;
+  /** Smaller reply-affordance styling — no internal-note checkbox, fewer rows. */
+  compact?: boolean;
+  onPosted?: () => void;
+}) {
   const [body, setBody] = useState("");
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -51,24 +63,26 @@ export function CommentComposer({ queryId }: { queryId: string }) {
   async function onSubmit() {
     if (!body.trim()) return;
     try {
-      await addComment.mutateAsync({ body, isInternalNote, mentionedUserIds });
+      await addComment.mutateAsync({ body, parentId, isInternalNote, mentionedUserIds });
       setBody("");
       setMentionedUserIds([]);
       setIsInternalNote(false);
+      onPosted?.();
     } catch (error) {
       toast.error(getApiErrorMessage(error));
     }
   }
 
   return (
-    <div className="space-y-2 border-b pb-4">
+    <div className={compact ? "space-y-2" : "space-y-2 border-b pb-4"}>
       <div className="relative">
         <Textarea
           ref={textareaRef}
-          rows={3}
-          placeholder="Add a comment… use @ to mention a teammate"
+          rows={compact ? 2 : 3}
+          placeholder={parentId ? "Write a reply… use @ to mention a teammate" : "Add a comment… use @ to mention a teammate"}
           value={body}
           onChange={onChange}
+          autoFocus={compact}
         />
         {suggestions.length > 0 ? (
           <div className="absolute z-10 mt-1 w-full rounded-lg bg-popover p-1 shadow-md ring-1 ring-foreground/10">
@@ -86,23 +100,27 @@ export function CommentComposer({ queryId }: { queryId: string }) {
         ) : null}
       </div>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="internal-note"
-            checked={isInternalNote}
-            onCheckedChange={(checked) => setIsInternalNote(checked === true)}
-          />
-          <Label htmlFor="internal-note" className="text-xs text-muted-foreground">
-            Internal note (not visible to customer)
-          </Label>
-        </div>
+        {compact ? (
+          <span />
+        ) : (
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="internal-note"
+              checked={isInternalNote}
+              onCheckedChange={(checked) => setIsInternalNote(checked === true)}
+            />
+            <Label htmlFor="internal-note" className="text-xs text-muted-foreground">
+              Internal note (not visible to customer)
+            </Label>
+          </div>
+        )}
         <Button
           size="sm"
           onClick={onSubmit}
           disabled={addComment.isPending || !body.trim()}
         >
           <Send className="size-3.5" />
-          {addComment.isPending ? "Posting…" : "Comment"}
+          {addComment.isPending ? "Posting…" : parentId ? "Reply" : "Comment"}
         </Button>
       </div>
     </div>

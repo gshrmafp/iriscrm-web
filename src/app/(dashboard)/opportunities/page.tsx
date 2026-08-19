@@ -13,7 +13,7 @@ import {
 } from "@/components/status-badge";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { PipelineBoard } from "@/features/opportunities/components/pipeline-board";
-import { useOpportunities } from "@/features/opportunities/hooks";
+import { useOpportunities, useOpportunityPipelineSummary } from "@/features/opportunities/hooks";
 import { useUserDirectory } from "@/features/identity/hooks";
 import { useAuth } from "@/features/auth/AuthProvider";
 import type { ListOpportunitiesFilters } from "@/features/opportunities/api";
@@ -53,9 +53,15 @@ const columns: ColumnDef<Opportunity>[] = [
 
 const DEFAULT_FILTERS: ListOpportunitiesFilters = { page: 1, pageSize: 25 };
 
+// The board isn't paginated in the UI — it needs (up to) the whole scope's
+// open pipeline to show accurate columns, not just one page of the list view.
+const BOARD_PAGE_SIZE = 200;
+
 export default function OpportunitiesPage() {
   const [filters, setFilters] = useState<ListOpportunitiesFilters>(DEFAULT_FILTERS);
   const { data, isLoading } = useOpportunities(filters);
+  const { data: boardData } = useOpportunities({ ownerId: filters.ownerId, pageSize: BOARD_PAGE_SIZE });
+  const { data: summary } = useOpportunityPipelineSummary(filters.ownerId);
   const router = useRouter();
   const { user } = useAuth();
   const { data: users = [] } = useUserDirectory();
@@ -90,7 +96,7 @@ export default function OpportunitiesPage() {
           <TabsTrigger value="list">List</TabsTrigger>
         </TabsList>
         <TabsContent value="board">
-          <PipelineBoard opportunities={data?.items ?? []} />
+          <PipelineBoard opportunities={boardData?.items ?? []} summary={summary} />
         </TabsContent>
         <TabsContent value="list">
           <DataTable

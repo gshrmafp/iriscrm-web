@@ -1,4 +1,4 @@
-import type { MeetingType, QueryPriority, SalesQueryStatus } from "@/types/entities";
+import type { FollowUpChannel, FollowUpStatus, MeetingType, QueryPriority, SalesQueryStatus } from "@/types/entities";
 
 export const STATUS_ORDER: SalesQueryStatus[] = [
   "NEW",
@@ -90,6 +90,8 @@ export const REMARK_REQUIRED_STATUSES: SalesQueryStatus[] = [
   "CLOSED",
 ];
 
+export const TERMINAL_STATUSES: SalesQueryStatus[] = ["WON", "LOST", "CANCELLED", "CLOSED"];
+
 export const PRIORITY_OPTIONS: QueryPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
 export const MEETING_TYPE_OPTIONS: { value: MeetingType; label: string }[] = [
@@ -97,3 +99,20 @@ export const MEETING_TYPE_OPTIONS: { value: MeetingType; label: string }[] = [
   { value: "SCHEDULED", label: "Scheduled" },
   { value: "REFERRAL", label: "Referral" },
 ];
+
+export const FOLLOW_UP_CHANNEL_OPTIONS: { value: FollowUpChannel; label: string }[] = [
+  { value: "call", label: "Call" },
+  { value: "meeting", label: "Meeting" },
+  { value: "email", label: "Email" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "on_site", label: "On-site visit" },
+  { value: "other", label: "Other" },
+];
+
+export const FOLLOW_UP_STATUS_LABELS: Record<FollowUpStatus, string> = {
+  PENDING: "Pending",
+  COMPLETED: "Completed",
+  RESCHEDULED: "Rescheduled",
+  OVERDUE: "Overdue",
+  CANCELLED: "Cancelled",
+};

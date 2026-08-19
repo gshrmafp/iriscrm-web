@@ -15,10 +15,10 @@ export function useOpportunities(filters: api.ListOpportunitiesFilters = {}) {
   });
 }
 
-export function useOpportunityPipelineSummary() {
+export function useOpportunityPipelineSummary(ownerId?: string) {
   return useQuery({
-    queryKey: opportunitiesKeys.summary,
-    queryFn: api.getOpportunityPipelineSummary,
+    queryKey: [...opportunitiesKeys.summary, ownerId ?? null],
+    queryFn: () => api.getOpportunityPipelineSummary(ownerId),
   });
 }
 

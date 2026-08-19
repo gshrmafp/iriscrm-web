@@ -20,25 +20,47 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useTransitionStatus } from "@/features/sales-queries/hooks";
+import { useStatusTransitionsMeta, useTransitionStatus } from "@/features/sales-queries/hooks";
 import { REMARK_REQUIRED_STATUSES, STATUS_LABELS, STATUS_TRANSITIONS } from "@/features/sales-queries/constants";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { SalesQueryStatus } from "@/types/entities";
 
+interface StatusChangeDialogProps {
+  queryId: string;
+  currentStatus: SalesQueryStatus;
+  /** Controlled mode (e.g. driven from the kanban board's advance button) — omit for the default self-triggered dialog. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialToStatus?: SalesQueryStatus;
+}
+
 export function StatusChangeDialog({
   queryId,
   currentStatus,
-}: {
-  queryId: string;
-  currentStatus: SalesQueryStatus;
-}) {
-  const [open, setOpen] = useState(false);
-  const nextOptions = STATUS_TRANSITIONS[currentStatus] ?? [];
-  const [toStatus, setToStatus] = useState<SalesQueryStatus | undefined>(nextOptions[0]);
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
+  initialToStatus,
+}: StatusChangeDialogProps) {
+  const isControlled = controlledOpen !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = isControlled ? setControlledOpen! : setUncontrolledOpen;
+
+  // Fetched from the backend's pipeline.ts (single source of truth) with the
+  // hand-copied constants.ts values as an immediate pre-fetch fallback.
+  const { data: meta } = useStatusTransitionsMeta();
+  const transitions = meta?.transitions ?? STATUS_TRANSITIONS;
+  const labels = meta?.labels ?? STATUS_LABELS;
+  const remarkRequiredStatuses = meta?.remarkRequiredStatuses ?? REMARK_REQUIRED_STATUSES;
+
+  const nextOptions = transitions[currentStatus] ?? [];
+  const [toStatus, setToStatus] = useState<SalesQueryStatus | undefined>(
+    initialToStatus ?? nextOptions[0],
+  );
   const [remark, setRemark] = useState("");
   const transitionStatus = useTransitionStatus(queryId);
 
-  const remarkRequired = toStatus ? REMARK_REQUIRED_STATUSES.includes(toStatus) : false;
+  const remarkRequired = toStatus ? remarkRequiredStatuses.includes(toStatus) : false;
 
   async function onConfirm() {
     if (!toStatus) return;
@@ -48,7 +70,7 @@ export function StatusChangeDialog({
     }
     try {
       await transitionStatus.mutateAsync({ toStatus, remark: remark || undefined });
-      toast.success(`Status changed to ${STATUS_LABELS[toStatus]}`);
+      toast.success(`Status changed to ${labels[toStatus]}`);
       setOpen(false);
       setRemark("");
     } catch (error) {
@@ -60,7 +82,9 @@ export function StatusChangeDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" />}>Change status</DialogTrigger>
+      {isControlled ? null : (
+        <DialogTrigger render={<Button variant="outline" />}>Change status</DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Change query status</DialogTitle>
@@ -77,7 +101,7 @@ export function StatusChangeDialog({
             <SelectContent>
               {nextOptions.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {STATUS_LABELS[status]}
+                  {labels[status]}
                 </SelectItem>
               ))}
             </SelectContent>

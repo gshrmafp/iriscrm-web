@@ -4,13 +4,21 @@ import { use } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, queryPriorityTone, salesQueryStatusTone } from "@/components/status-badge";
-import { useSalesQuery, useSalesQueryPermissions } from "@/features/sales-queries/hooks";
-import { STATUS_LABELS } from "@/features/sales-queries/constants";
+import {
+  useSalesQuery,
+  useSalesQueryPermissions,
+  useStatusTransitionsMeta,
+} from "@/features/sales-queries/hooks";
+import { STATUS_LABELS, TERMINAL_STATUSES } from "@/features/sales-queries/constants";
 import { ActivityTimeline } from "@/features/sales-queries/components/activity-timeline";
 import { CommentComposer } from "@/features/sales-queries/components/comment-composer";
 import { AttachmentUpload } from "@/features/sales-queries/components/attachment-upload";
 import { StatusChangeDialog } from "@/features/sales-queries/components/status-change-dialog";
 import { AssignDepartmentDialog } from "@/features/sales-queries/components/assign-department-dialog";
+import { ReassignOwnerDialog } from "@/features/sales-queries/components/reassign-owner-dialog";
+import { SalesQueryFormSheet } from "@/features/sales-queries/components/sales-query-form-sheet";
+import { FollowUpFormDialog } from "@/features/sales-queries/components/follow-up-form-dialog";
+import { FollowUpList } from "@/features/sales-queries/components/follow-up-list";
 
 export default function SalesQueryDetailPage({
   params,
@@ -20,10 +28,14 @@ export default function SalesQueryDetailPage({
   const { id } = use(params);
   const { data: query, isLoading } = useSalesQuery(id);
   const permissions = useSalesQueryPermissions(query);
+  const { data: meta } = useStatusTransitionsMeta();
 
   if (isLoading || !query) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
+
+  const terminalStatuses = meta?.terminalStatuses ?? TERMINAL_STATUSES;
+  const isTerminal = terminalStatuses.includes(query.status);
 
   return (
     <div>
@@ -32,6 +44,15 @@ export default function SalesQueryDetailPage({
         description={`${query.refNo} · ${query.companyName ?? "—"}`}
         actions={
           <>
+            {permissions.canEdit && !isTerminal ? <SalesQueryFormSheet query={query} /> : null}
+            {permissions.canReassignOwner ? (
+              <ReassignOwnerDialog
+                queryId={query.id}
+                regionId={query.regionId}
+                currentOwnerId={query.ownerId}
+                currentAssignedToId={query.assignedToId}
+              />
+            ) : null}
             {permissions.canAssign ? (
               <AssignDepartmentDialog queryId={query.id} regionId={query.regionId} />
             ) : null}
@@ -103,6 +124,16 @@ export default function SalesQueryDetailPage({
         </Card>
 
         <Card className="md:col-span-2">
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="text-base">Follow-ups</CardTitle>
+            {permissions.canManageFollowUps ? <FollowUpFormDialog queryId={query.id} /> : null}
+          </CardHeader>
+          <CardContent>
+            <FollowUpList queryId={query.id} canManage={permissions.canManageFollowUps} />
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-3">
           <CardHeader>
             <CardTitle className="text-base">Activity</CardTitle>
           </CardHeader>

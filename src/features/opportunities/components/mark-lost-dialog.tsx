@@ -18,8 +18,13 @@ import { getApiErrorMessage } from "@/lib/api-client";
 
 export function MarkOpportunityLostDialog({
   opportunityId,
+  triggerRender,
+  triggerContent,
 }: {
   opportunityId: string;
+  /** Custom trigger element (e.g. a compact icon button for use inside a card) — defaults to a plain destructive Button. */
+  triggerRender?: React.ReactElement;
+  triggerContent?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -38,8 +43,8 @@ export function MarkOpportunityLostDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="destructive" />}>
-        Mark lost
+      <DialogTrigger render={triggerRender ?? <Button variant="destructive" />}>
+        {triggerContent ?? "Mark lost"}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

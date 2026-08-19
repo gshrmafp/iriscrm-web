@@ -75,15 +75,6 @@ export function isDepartmentMember(
   return !!departmentId && memberships.some((m) => m.departmentId === departmentId);
 }
 
-export function isDepartmentManager(
-  departmentId: string | null | undefined,
-  memberships: DepartmentMembership[],
-): boolean {
-  return memberships.some(
-    (m) => m.departmentId === departmentId && m.roleInDept === "MANAGER",
-  );
-}
-
 export function canCommentOnQuery(
   role: Role | undefined,
   memberships: DepartmentMembership[],
@@ -114,12 +105,45 @@ export function canAssignQueryDepartment(role?: Role): boolean {
   return isManagerOrAbove(role);
 }
 
-export function canModerateQueryComment(
+export function canReassignQueryOwner(role?: Role): boolean {
+  return isManagerOrAbove(role);
+}
+
+// Mirrors the backend's SALES_QUERY_COMMENT_MODERATE permission, which is
+// granted to SUPER_ADMIN / REGIONAL_ADMIN / SALES_MANAGER only — it is a
+// role-based grant, not department-membership-scoped, so this intentionally
+// does not consult `memberships` (unlike canCommentOnQuery/canChangeQueryStatus).
+export function canModerateQueryComment(role: Role | undefined): boolean {
+  return isManagerOrAbove(role);
+}
+
+// Same visibility/authorization shape as canChangeQueryStatus — mirrors the
+// backend's shared assertDepartmentAuthorized gate used for both update and
+// follow-up management.
+export function canEditQuery(
   role: Role | undefined,
   memberships: DepartmentMembership[],
-  query: { departmentId?: string | null },
+  query: { departmentId?: string | null; ownerId: string },
+  currentUserId?: string,
 ): boolean {
-  return isRegionalAdminOrAbove(role) || isDepartmentManager(query.departmentId, memberships);
+  return (
+    isManagerOrAbove(role) ||
+    query.ownerId === currentUserId ||
+    isDepartmentMember(query.departmentId, memberships)
+  );
+}
+
+export function canManageFollowUps(
+  role: Role | undefined,
+  memberships: DepartmentMembership[],
+  query: { departmentId?: string | null; ownerId: string },
+  currentUserId?: string,
+): boolean {
+  return (
+    isManagerOrAbove(role) ||
+    query.ownerId === currentUserId ||
+    isDepartmentMember(query.departmentId, memberships)
+  );
 }
 
 export function canDeleteAttachment(

@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/api-client";
 import type {
+  FollowUpChannel,
   MeetingType,
   QueryComment,
   QueryFollowUp,
@@ -124,7 +125,7 @@ export interface CreateFollowUpPayload {
   note?: string;
   scheduledAt: string;
   reminderMinutes?: number;
-  channel?: string;
+  channel?: FollowUpChannel;
   assignedToId?: string;
 }
 export interface UpdateFollowUpPayload {
@@ -132,7 +133,7 @@ export interface UpdateFollowUpPayload {
   note?: string;
   scheduledAt?: string;
   reminderMinutes?: number;
-  channel?: string;
+  channel?: FollowUpChannel;
   assignedToId?: string;
 }
 export interface CompleteFollowUpPayload {
@@ -145,11 +146,34 @@ export interface RescheduleFollowUpPayload {
   reminderMinutes?: number;
 }
 export interface ListFollowUpsFilters {
-  status?: "PENDING" | "COMPLETED" | "CANCELLED" | "RESCHEDULED";
+  status?: "PENDING" | "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "OVERDUE";
   assignedToId?: string;
   fromDate?: string;
   toDate?: string;
   includeOverdue?: boolean;
+}
+export interface StatusTransitionsMeta {
+  transitions: Record<SalesQueryStatus, SalesQueryStatus[]>;
+  remarkRequiredStatuses: SalesQueryStatus[];
+  labels: Record<SalesQueryStatus, string>;
+  terminalStatuses: SalesQueryStatus[];
+}
+export interface ReportQueryParams {
+  reportType:
+    | "sales_conversion"
+    | "pending_queries"
+    | "follow_ups"
+    | "employee_performance"
+    | "department_performance"
+    | "resolution_time"
+    | "lost_opportunity"
+    | "monthly_sales";
+  fromDate?: string;
+  toDate?: string;
+  departmentId?: string;
+  userId?: string;
+  regionId?: string;
+  format?: "json" | "csv";
 }
 
 export async function listSalesQueries(
@@ -166,6 +190,31 @@ export async function getSalesQuery(id: string): Promise<SalesQuery> {
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const { data } = await apiClient.get<DashboardStats>("/sales-queries/dashboard/stats");
+  return data;
+}
+
+export async function getStatusTransitionsMeta(): Promise<StatusTransitionsMeta> {
+  const { data } = await apiClient.get<StatusTransitionsMeta>(
+    "/sales-queries/meta/status-transitions",
+  );
+  return data;
+}
+
+// Returns a blob for format=csv, otherwise the parsed report rows.
+export async function runReport(
+  params: ReportQueryParams,
+): Promise<Record<string, unknown>[] | Blob> {
+  if (params.format === "csv") {
+    const response = await apiClient.get("/sales-queries/reports", {
+      params,
+      responseType: "blob",
+    });
+    return response.data as Blob;
+  }
+  const { data } = await apiClient.get<Record<string, unknown>[]>(
+    "/sales-queries/reports",
+    { params },
+  );
   return data;
 }
 

@@ -18,6 +18,7 @@ import {
   CheckSquare,
   Box,
   MessageCircleQuestion,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -36,6 +37,8 @@ const SALES_NAV = [
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/opportunities", label: "Opportunities", icon: Target },
   { href: "/sales-queries", label: "Sales Queries", icon: MessageCircleQuestion },
+  { href: "/sales-queries/dashboard", label: "Query Dashboard", icon: BarChart3 },
+  { href: "/sales-queries/reports", label: "Query Reports", icon: FileText },
   { href: "/catalog/items", label: "Catalog", icon: Package },
 ];
 
@@ -52,6 +55,22 @@ interface NavItem {
   icon: typeof LayoutDashboard;
 }
 
+// Sibling routes can share a path prefix (e.g. "/sales-queries" is a prefix of
+// both "/sales-queries/dashboard" and a query detail page "/sales-queries/:id").
+// A plain "does this href prefix-match the pathname" check would highlight
+// every matching ancestor at once — only the single most specific (longest)
+// matching href should count as the active item.
+function findActiveHref(pathname: string, items: NavItem[]): string | undefined {
+  let best: string | undefined;
+  for (const item of items) {
+    const matches = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    if (matches && (!best || item.href.length > best.length)) {
+      best = item.href;
+    }
+  }
+  return best;
+}
+
 function SidebarSection({
   title,
   items,
@@ -64,9 +83,8 @@ function SidebarSection({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const containsActive = items.some(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
+  const activeHref = findActiveHref(pathname, items);
+  const containsActive = activeHref !== undefined;
 
   return (
     <div>
@@ -92,7 +110,7 @@ function SidebarSection({
           >
             <div className="space-y-1 pb-2">
               {items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const active = item.href === activeHref;
                 const Icon = item.icon;
                 return (
                   <Link

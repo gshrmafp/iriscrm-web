@@ -356,6 +356,9 @@ export interface QueryComment {
   editedAt?: string | null;
   deleted: boolean;
   deletedAt?: string | null;
+  isPinned: boolean;
+  pinnedAt?: string | null;
+  pinnedBy?: string | null;
   createdAt: string;
   replies?: QueryComment[];
   attachments?: QueryAttachment[];
@@ -431,15 +434,18 @@ export interface SalesQuery {
 export type FollowUpStatus =
   | "PENDING"
   | "COMPLETED"
-  | "CANCELLED"
-  | "RESCHEDULED";
+  | "RESCHEDULED"
+  | "OVERDUE"
+  | "CANCELLED";
+// `channel` is a free-text column on the backend (String, not an enum) —
+// these are just the values the create/update DTOs' zod schema accepts.
 export type FollowUpChannel =
-  | "CALL"
-  | "MEETING"
-  | "EMAIL"
-  | "WHATSAPP"
-  | "SITE_VISIT"
-  | "OTHER";
+  | "call"
+  | "meeting"
+  | "email"
+  | "whatsapp"
+  | "on_site"
+  | "other";
 
 export interface QueryFollowUp {
   id: string;

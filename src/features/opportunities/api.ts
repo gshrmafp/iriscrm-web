@@ -46,8 +46,12 @@ export async function listOpportunities(
   return data;
 }
 
-export async function getOpportunityPipelineSummary(): Promise<OpportunityPipelineSummary> {
-  const { data } = await apiClient.get<OpportunityPipelineSummary>("/opportunities/summary/stats");
+export async function getOpportunityPipelineSummary(
+  ownerId?: string,
+): Promise<OpportunityPipelineSummary> {
+  const { data } = await apiClient.get<OpportunityPipelineSummary>("/opportunities/summary/stats", {
+    params: ownerId ? { ownerId } : undefined,
+  });
   return data;
 }
 
