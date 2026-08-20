@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +22,33 @@ import { useUserDirectory } from "@/features/identity/hooks";
 import { useRunReport } from "@/features/sales-queries/hooks";
 import type { ReportQueryParams } from "@/features/sales-queries/api";
 import { getApiErrorMessage } from "@/lib/api-client";
+
+// Report rows are generic key/value records shaped by whichever report ran
+// (see repository.ts#runReport) — these two helpers turn raw keys/values into
+// something readable without each report needing its own column definitions.
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+
+function humanizeHeader(key: string): string {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/^./, (c) => c.toUpperCase())
+    .trim();
+}
+
+function formatCellValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string" && ISO_DATE_RE.test(value)) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return format(parsed, "PP p");
+  }
+  if (typeof value === "object") {
+    // Defensive only — every report is expected to return flat rows now
+    // (see repository.ts#runReport), so this should never actually render.
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
 
 const REPORT_TYPE_OPTIONS: { value: ReportQueryParams["reportType"]; label: string }[] = [
   { value: "sales_conversion", label: "Sales conversion" },
@@ -158,7 +186,9 @@ export default function SalesQueryReportsPage() {
                   <TableHeader>
                     <TableRow>
                       {columns.map((col) => (
-                        <TableHead key={col}>{col}</TableHead>
+                        <TableHead key={col} className="whitespace-nowrap">
+                          {humanizeHeader(col)}
+                        </TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -166,7 +196,9 @@ export default function SalesQueryReportsPage() {
                     {rows.map((row, i) => (
                       <TableRow key={i}>
                         {columns.map((col) => (
-                          <TableCell key={col}>{String(row[col] ?? "—")}</TableCell>
+                          <TableCell key={col} className="whitespace-nowrap">
+                            {formatCellValue(row[col])}
+                          </TableCell>
                         ))}
                       </TableRow>
                     ))}

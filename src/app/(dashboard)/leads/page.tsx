@@ -28,7 +28,7 @@ const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
   { value: "LOST", label: "Lost" },
 ];
 
-function useColumns(): ColumnDef<Lead>[] {
+function useColumns(nameFor: (id: string) => string): ColumnDef<Lead>[] {
   const resolveLabel = usePicklistLabelResolver();
   return [
     { accessorKey: "refNo", header: "Ref #" },
@@ -60,6 +60,11 @@ function useColumns(): ColumnDef<Lead>[] {
         />
       ),
     },
+    {
+      accessorKey: "createdBy",
+      header: "Created by",
+      cell: ({ row }) => nameFor(row.original.createdBy),
+    },
   ];
 }
 
@@ -69,7 +74,6 @@ export default function LeadsPage() {
   const [filters, setFilters] = useState<ListLeadsFilters>(DEFAULT_FILTERS);
   const { data, isLoading } = useLeads(filters);
   const router = useRouter();
-  const columns = useColumns();
   const { user } = useAuth();
   const { data: users = [] } = useUserDirectory();
   const canFilterByOwner = !!user && CAN_FILTER_BY_OWNER.includes(user.role);
@@ -80,6 +84,11 @@ export default function LeadsPage() {
     [users],
   );
   const selectedOwnerName = users.find((u) => u.id === filters.ownerId)?.name;
+  const nameFor = useMemo(() => {
+    const map = new Map(users.map((u) => [u.id, u.name] as const));
+    return (id: string) => map.get(id) ?? id;
+  }, [users]);
+  const columns = useColumns(nameFor);
 
   return (
     <div>

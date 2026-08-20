@@ -14,6 +14,7 @@ import {
   useEffectivePermissions,
   useUsers,
 } from "@/features/identity/hooks";
+import { PermissionOverrideForm } from "@/features/identity/components/permission-override-form";
 import { PERMISSION_CATALOG } from "@/lib/permission-catalog";
 import { ROLES } from "@/lib/permissions";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -218,6 +219,18 @@ function UserPermissionsPanel({ userId }: { userId: string }) {
           </CardContent>
         </Card>
       ) : null}
+
+      {/* Free-form override entry — covers any permission key not (yet)
+          listed in PERMISSION_CATALOG's toggle grid above, plus optional
+          expiry. Same form the per-user Users→Permissions page uses. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Add an override</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PermissionOverrideForm userId={userId} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { MapPin, Plus } from "lucide-react";
+import { CheckCircle2, Contact, Locate, MapPin, Plus, RefreshCw, ShieldAlert, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import {
   Dialog,
@@ -24,6 +25,27 @@ import { useCreateLead } from "@/features/leads/hooks";
 import { useActivePicklistOptions } from "@/features/picklists/hooks";
 import { useReverseGeocode } from "@/features/geo/hooks";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+
+function FormSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof Contact;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Icon className="size-3.5 text-primary" />
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 // The country code is fixed to +91 in the UI (input box shown separately),
 // so the form field only ever holds the bare 10-digit local number — mirrors
@@ -77,12 +99,122 @@ type LeadFormValues = z.infer<typeof leadSchema>;
 
 type GeoPermissionState = PermissionState | "unsupported" | null;
 
+function LocationCapture({
+  locating,
+  gpsLatitude,
+  gpsLongitude,
+  visitLocation,
+  resolvingAddress,
+  geoPermission,
+  autoCaptureUnavailable,
+  autoCaptureFailed,
+  insecureContext,
+  onCapture,
+}: {
+  locating: boolean;
+  gpsLatitude?: number;
+  gpsLongitude?: number;
+  visitLocation?: string;
+  resolvingAddress: boolean;
+  geoPermission: GeoPermissionState;
+  autoCaptureUnavailable: boolean;
+  autoCaptureFailed: boolean;
+  insecureContext: boolean;
+  onCapture: () => void;
+}) {
+  const captured = gpsLatitude != null && gpsLongitude != null;
+
+  if (captured) {
+    return (
+      <div className="flex items-start gap-3 rounded-xl border border-success/30 bg-success/5 px-3.5 py-3">
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            {resolvingAddress
+              ? "Resolving address…"
+              : visitLocation || "Address unavailable for these coordinates"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {gpsLatitude.toFixed(5)}, {gpsLongitude.toFixed(5)}
+          </p>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline disabled:opacity-50"
+            onClick={onCapture}
+            disabled={locating}
+          >
+            <RefreshCw className={cn("size-3", locating && "animate-spin")} />
+            {locating ? "Locating…" : "Recapture location"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const status = insecureContext
+    ? {
+        warning: true,
+        text: "Location capture requires HTTPS or localhost — this page was opened over an insecure connection.",
+      }
+    : geoPermission === "denied"
+      ? {
+          warning: true,
+          text: 'Location access is blocked for this site. Click the location icon in your browser\'s address bar and choose "Allow", then try again.',
+        }
+      : autoCaptureUnavailable
+        ? {
+            warning: true,
+            text: "Location Services appear to be turned off for this browser at the system level. Enable them in your system settings, then try again.",
+          }
+        : autoCaptureFailed
+          ? {
+              warning: true,
+              text: "Couldn't detect your location automatically. Try again, or allow location access if your browser prompts you.",
+            }
+          : locating
+            ? { warning: false, text: "Detecting your current location…" }
+            : {
+                warning: false,
+                text: "Click below, or allow location access when prompted, to capture the visit location.",
+              };
+
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-3 rounded-xl border px-3.5 py-3",
+        status.warning ? "border-warning/30 bg-warning/5" : "border-border bg-muted/30",
+      )}
+    >
+      {status.warning ? (
+        <ShieldAlert className="mt-0.5 size-4 shrink-0 text-warning-foreground dark:text-warning" />
+      ) : (
+        <Locate className={cn("mt-0.5 size-4 shrink-0 text-muted-foreground", locating && "animate-pulse")} />
+      )}
+      <div className="min-w-0 flex-1 space-y-2.5">
+        <p
+          className={cn(
+            "text-xs",
+            status.warning ? "text-warning-foreground dark:text-warning" : "text-muted-foreground",
+          )}
+        >
+          {status.text}
+        </p>
+        <Button type="button" variant="outline" size="sm" onClick={onCapture} disabled={locating}>
+          <MapPin className="size-3.5" />
+          {locating ? "Locating…" : "Capture current location"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function LeadFormDialog() {
   const [open, setOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const [geoPermission, setGeoPermission] = useState<GeoPermissionState>(null);
   const [autoCaptureFailed, setAutoCaptureFailed] = useState(false);
   const [autoCaptureUnavailable, setAutoCaptureUnavailable] = useState(false);
+  const [insecureContext, setInsecureContext] = useState(false);
   const createLead = useCreateLead();
   const reverseGeocode = useReverseGeocode();
   const { data: sourceOptions = [] } = useActivePicklistOptions("LEAD_SOURCE");
@@ -142,6 +274,20 @@ export function LeadFormDialog() {
       if (!silent) toast.error("Location capture isn't supported by this browser");
       return;
     }
+    // Browsers only grant geolocation on HTTPS or localhost — on an insecure
+    // origin (e.g. a plain-HTTP LAN IP) getCurrentPosition fails immediately
+    // with a generic permission error that would otherwise show the "click
+    // the address-bar icon" message below, which doesn't actually fix this.
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setInsecureContext(true);
+      if (!silent) {
+        toast.error(
+          "Location capture requires HTTPS or localhost — this page was opened over an insecure connection",
+        );
+      }
+      return;
+    }
+    setInsecureContext(false);
     setLocating(true);
 
     function onSuccess(position: GeolocationPosition) {
@@ -212,6 +358,7 @@ export function LeadFormDialog() {
     setGeoPermission(null);
     setAutoCaptureFailed(false);
     setAutoCaptureUnavailable(false);
+    setInsecureContext(false);
 
     if (!navigator.permissions?.query) {
       captureLocation({ silent: true });
@@ -274,180 +421,158 @@ export function LeadFormDialog() {
         <Plus className="size-4" />
         New Lead
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+      {/* Fluid width/height — scales continuously with the viewport (min()
+          against a vw figure) instead of snapping between fixed Tailwind
+          breakpoints, and is capped so it never exceeds the viewport itself. */}
+      <DialogContent className="flex max-h-[90vh] w-[min(94vw,68rem)] flex-col gap-5 overflow-hidden p-6 sm:max-w-none">
         <DialogHeader>
           <DialogTitle>Capture a lead</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="contactName">
-              Contact name <span className="text-destructive">*</span>
-            </Label>
-            <Input id="contactName" {...register("contactName")} />
-            {errors.contactName ? (
-              <p className="text-sm text-destructive">{errors.contactName.message}</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="companyName">Company name</Label>
-            <Input id="companyName" {...register("companyName")} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contactPhone">Phone</Label>
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground select-none">
-                +91
-              </span>
-              <Input
-                id="contactPhone"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                maxLength={10}
-                placeholder="98765 43210"
-                {...register("contactPhone")}
-                onChange={handlePhoneChange}
-              />
-            </div>
-            {phoneError ? <p className="text-sm text-destructive">{phoneError}</p> : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contactEmail">Email</Label>
-            <Input id="contactEmail" type="email" {...register("contactEmail")} />
-            {errors.contactEmail ? (
-              <p className="text-sm text-destructive">{errors.contactEmail.message}</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea id="address" rows={2} placeholder="Contact or company address" {...register("address")} />
-            {errors.address ? <p className="text-sm text-destructive">{errors.address.message}</p> : null}
-          </div>
-          <div className="space-y-2">
-            <Label>Visit location</Label>
-            {!(gpsLatitude != null && gpsLongitude != null) ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
+        {/* The form is the flex column that actually owns the available
+            height: the two-column field grid is the only scrollable region
+            (min-h-0 lets it shrink instead of forcing the dialog to grow past
+            max-h), while the footer below sits outside that scroll area so
+            Save/Cancel stay pinned and visible even if the fields overflow on
+            a short viewport. */}
+        <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+          <div className="grid min-h-0 flex-1 gap-x-8 gap-y-5 overflow-y-auto py-0.5 pr-1 md:grid-cols-2">
+            <div className="space-y-5">
+              <FormSection icon={Contact} title="Contact information">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="contactName">
+                      Contact name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input id="contactName" {...register("contactName")} />
+                    {errors.contactName ? (
+                      <p className="text-sm text-destructive">{errors.contactName.message}</p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company name</Label>
+                    <Input id="companyName" {...register("companyName")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contactPhone">Phone</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-9 shrink-0 items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground select-none">
+                        +91
+                      </span>
+                      <Input
+                        id="contactPhone"
+                        inputMode="numeric"
+                        autoComplete="tel-national"
+                        maxLength={10}
+                        placeholder="98765 43210"
+                        {...register("contactPhone")}
+                        onChange={handlePhoneChange}
+                      />
+                    </div>
+                    {phoneError ? <p className="text-sm text-destructive">{phoneError}</p> : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contactEmail">Email</Label>
+                    <Input id="contactEmail" type="email" {...register("contactEmail")} />
+                    {errors.contactEmail ? (
+                      <p className="text-sm text-destructive">{errors.contactEmail.message}</p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea id="address" rows={2} placeholder="Contact or company address" {...register("address")} />
+                  {errors.address ? <p className="text-sm text-destructive">{errors.address.message}</p> : null}
+                </div>
+              </FormSection>
+
+              <Separator />
+
+              <FormSection icon={MapPin} title="Visit location">
+                <LocationCapture
+                  locating={locating}
+                  gpsLatitude={gpsLatitude}
+                  gpsLongitude={gpsLongitude}
+                  visitLocation={visitLocation}
+                  resolvingAddress={reverseGeocode.isPending}
+                  geoPermission={geoPermission}
+                  autoCaptureUnavailable={autoCaptureUnavailable}
+                  autoCaptureFailed={autoCaptureFailed}
+                  insecureContext={insecureContext}
+                  onCapture={() => {
                     setAutoCaptureFailed(false);
                     setAutoCaptureUnavailable(false);
                     captureLocation();
                   }}
-                  disabled={locating}
-                >
-                  <MapPin className="size-3.5" />
-                  {locating ? "Locating…" : "Capture current location"}
-                </Button>
-              </div>
-            ) : null}
-            {gpsLatitude != null && gpsLongitude != null ? (
-              <div className="space-y-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
-                <p className="text-muted-foreground">
-                  {gpsLatitude.toFixed(5)}, {gpsLongitude.toFixed(5)}
-                </p>
-                <p className="text-foreground">
-                  {reverseGeocode.isPending
-                    ? "Resolving address…"
-                    : visitLocation || "Address unavailable for these coordinates"}
-                </p>
-                <button
-                  type="button"
-                  className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                  onClick={() => {
-                    setAutoCaptureFailed(false);
-                    setAutoCaptureUnavailable(false);
-                    captureLocation();
-                  }}
-                  disabled={locating}
-                >
-                  {locating ? "Locating…" : "Recapture location"}
-                </button>
-              </div>
-            ) : locating ? (
-              <p className="text-xs text-muted-foreground">Detecting your current location…</p>
-            ) : geoPermission === "denied" ? (
-              <p className="text-xs text-warning-foreground dark:text-warning">
-                Location access is blocked for this site. Click the location icon in your browser&apos;s
-                address bar and choose &quot;Allow&quot;, then click &quot;Capture current location&quot; above.
-              </p>
-            ) : autoCaptureUnavailable ? (
-              <p className="text-xs text-warning-foreground dark:text-warning">
-                Location Services appear to be turned off for this browser at the system level. Enable
-                them in your system settings, then click &quot;Capture current location&quot; above.
-              </p>
-            ) : autoCaptureFailed ? (
-              <p className="text-xs text-warning-foreground dark:text-warning">
-                Couldn&apos;t detect your location automatically. Click &quot;Capture current location&quot;
-                above to try again, or allow location access if your browser prompts you.
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                No location captured yet — click above, or allow location access when prompted.
-              </p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label>
-              Source <span className="text-destructive">*</span>
-            </Label>
-            <Combobox
-              items={sourceItems}
-              value={source || null}
-              onValueChange={(value) => setValue("source", value ?? "", { shouldValidate: true })}
-              placeholder="Search a source…"
-              emptyMessage="No sources found."
-            />
-            {errors.source ? (
-              <p className="text-sm text-destructive">{errors.source.message}</p>
-            ) : null}
-            {source === OTHER_CODE ? (
-              <div className="space-y-1">
-                <Input placeholder="Please specify the source" {...register("sourceOther")} />
-                {errors.sourceOther ? (
-                  <p className="text-sm text-destructive">{errors.sourceOther.message}</p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label>Product interest</Label>
-            <Combobox
-              items={productItems}
-              value={productInterest || null}
-              onValueChange={(value) => setValue("productInterest", value ?? "")}
-              placeholder="Search a product (optional)…"
-              emptyMessage="No products found."
-            />
-            {productInterest === OTHER_CODE ? (
-              <div className="space-y-1">
-                <Input placeholder="Please specify the product of interest" {...register("productInterestOther")} />
-                {errors.productInterestOther ? (
-                  <p className="text-sm text-destructive">{errors.productInterestOther.message}</p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="notes">Notes</Label>
-              <span
-                className={
-                  notes.length > NOTES_MAX_LENGTH
-                    ? "text-xs text-destructive"
-                    : "text-xs text-muted-foreground"
-                }
-              >
-                {notes.length}/{NOTES_MAX_LENGTH}
-              </span>
+                />
+              </FormSection>
             </div>
-            <Textarea id="notes" rows={3} maxLength={NOTES_MAX_LENGTH} {...register("notes")} />
-            {errors.notes ? (
-              <p className="text-sm text-destructive">{errors.notes.message}</p>
-            ) : null}
+
+            <div className="space-y-5 md:border-l md:pl-8">
+              <FormSection icon={Tag} title="Lead details">
+                <div className="space-y-2">
+                  <Label>
+                    Source <span className="text-destructive">*</span>
+                  </Label>
+                  <Combobox
+                    items={sourceItems}
+                    value={source || null}
+                    onValueChange={(value) => setValue("source", value ?? "", { shouldValidate: true })}
+                    placeholder="Search a source…"
+                    emptyMessage="No sources found."
+                  />
+                  {errors.source ? (
+                    <p className="text-sm text-destructive">{errors.source.message}</p>
+                  ) : null}
+                  {source === OTHER_CODE ? (
+                    <div className="space-y-1">
+                      <Input placeholder="Please specify the source" {...register("sourceOther")} />
+                      {errors.sourceOther ? (
+                        <p className="text-sm text-destructive">{errors.sourceOther.message}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <Label>Product interest</Label>
+                  <Combobox
+                    items={productItems}
+                    value={productInterest || null}
+                    onValueChange={(value) => setValue("productInterest", value ?? "")}
+                    placeholder="Search a product (optional)…"
+                    emptyMessage="No products found."
+                  />
+                  {productInterest === OTHER_CODE ? (
+                    <div className="space-y-1">
+                      <Input placeholder="Please specify the product of interest" {...register("productInterestOther")} />
+                      {errors.productInterestOther ? (
+                        <p className="text-sm text-destructive">{errors.productInterestOther.message}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="notes">Notes</Label>
+                    <span
+                      className={
+                        notes.length > NOTES_MAX_LENGTH
+                          ? "text-xs text-destructive"
+                          : "text-xs text-muted-foreground"
+                      }
+                    >
+                      {notes.length}/{NOTES_MAX_LENGTH}
+                    </span>
+                  </div>
+                  <Textarea id="notes" rows={3} maxLength={NOTES_MAX_LENGTH} {...register("notes")} />
+                  {errors.notes ? (
+                    <p className="text-sm text-destructive">{errors.notes.message}</p>
+                  ) : null}
+                </div>
+              </FormSection>
+            </div>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="-mx-6 -mb-6 shrink-0 p-6 pt-4">
             <Button type="submit" disabled={createLead.isPending}>
               {createLead.isPending ? "Saving…" : "Save lead"}
             </Button>
