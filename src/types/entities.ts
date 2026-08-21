@@ -28,6 +28,8 @@ export interface User {
   regionId: string;
   reportingToId?: string | null;
   status?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type PermissionEffect = "GRANT" | "DENY";

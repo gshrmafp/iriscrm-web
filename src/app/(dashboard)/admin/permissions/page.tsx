@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Search, Shield, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -222,7 +223,7 @@ function UserPermissionsPanel({ userId }: { userId: string }) {
 
       {/* Free-form override entry — covers any permission key not (yet)
           listed in PERMISSION_CATALOG's toggle grid above, plus optional
-          expiry. Same form the per-user Users→Permissions page uses. */}
+          expiry. */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Add an override</CardTitle>
@@ -236,7 +237,12 @@ function UserPermissionsPanel({ userId }: { userId: string }) {
 }
 
 export default function PermissionsPage() {
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  // Lets the user-details page's "Manage permissions" link deep-link
+  // straight to that user instead of landing on an empty picker.
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(
+    () => searchParams.get("userId"),
+  );
 
   return (
     <div>

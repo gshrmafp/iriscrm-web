@@ -7,6 +7,7 @@ export const identityKeys = {
   usersList: (filters: api.ListUsersFilters) => ["users", "list", filters] as const,
   userDirectory: ["users", "directory"] as const,
   permissions: (userId: string) => ["users", userId, "permissions"] as const,
+  detail: (userId: string) => ["users", userId] as const,
 };
 
 export function useRegions() {
@@ -61,6 +62,25 @@ export function useUpdateUserStatus() {
     mutationFn: ({ id, status }: { id: string; status: "ACTIVE" | "INACTIVE" }) =>
       api.updateUserStatus(id, { status }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: identityKeys.users });
+    },
+  });
+}
+
+export function useUser(userId: string) {
+  return useQuery({
+    queryKey: identityKeys.detail(userId),
+    queryFn: () => api.getUser(userId),
+    enabled: !!userId,
+  });
+}
+
+export function useUpdateUser(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: api.UpdateUserPayload) => api.updateUser(userId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: identityKeys.detail(userId) });
       queryClient.invalidateQueries({ queryKey: identityKeys.users });
     },
   });

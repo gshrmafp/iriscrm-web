@@ -91,7 +91,7 @@ export default function UsersPage() {
     <div>
       <PageHeader
         title="Users"
-        description="Manage platform users, roles and per-user permission overrides."
+        description="Manage platform users, roles and regions. Permission overrides live on the Permissions page."
         actions={<UserFormSheet />}
       />
       <div className="mb-4 flex items-center gap-2">
@@ -109,7 +109,7 @@ export default function UsersPage() {
         data={data?.items ?? []}
         isLoading={isLoading}
         emptyMessage="No users yet."
-        onRowClick={(user) => router.push(`/admin/users/${user.id}/permissions`)}
+        onRowClick={(user) => router.push(`/admin/users/${user.id}`)}
       />
       <PaginationBar
         page={data?.page ?? filters.page ?? 1}

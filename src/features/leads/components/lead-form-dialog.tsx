@@ -99,6 +99,22 @@ type LeadFormValues = z.infer<typeof leadSchema>;
 
 type GeoPermissionState = PermissionState | "unsupported" | null;
 
+// POSITION_UNAVAILABLE means the browser itself couldn't get a fix — most
+// often because the OS has location services off system-wide, or specifically
+// for this browser. That's an OS setting no web page can toggle, so the best
+// we can do is point at the exact menu for the platform actually in use.
+function positionUnavailableHint(): string {
+  if (typeof navigator === "undefined") return "check that Location Services are enabled for this browser";
+  const platform = `${navigator.platform ?? ""} ${navigator.userAgent ?? ""}`;
+  if (/Mac/i.test(platform)) {
+    return "check System Settings → Privacy & Security → Location Services is on, and that your browser is allowed there";
+  }
+  if (/Win/i.test(platform)) {
+    return "check Windows Settings → Privacy & security → Location is on, and that your browser is allowed there";
+  }
+  return "check that Location Services are turned on for this browser in your system settings";
+}
+
 function LocationCapture({
   locating,
   gpsLatitude,
@@ -130,9 +146,7 @@ function LocationCapture({
         <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-sm font-medium text-foreground">
-            {resolvingAddress
-              ? "Resolving address…"
-              : visitLocation || "Address unavailable for these coordinates"}
+            {resolvingAddress ? "Resolving address…" : visitLocation || "GPS captured"}
           </p>
           <p className="text-xs text-muted-foreground">
             {gpsLatitude.toFixed(5)}, {gpsLongitude.toFixed(5)}
@@ -164,7 +178,7 @@ function LocationCapture({
       : autoCaptureUnavailable
         ? {
             warning: true,
-            text: "Location Services appear to be turned off for this browser at the system level. Enable them in your system settings, then try again.",
+            text: `Location Services appear to be off for this browser — ${positionUnavailableHint()}. Or just type the location in below.`,
           }
         : autoCaptureFailed
           ? {
@@ -175,7 +189,7 @@ function LocationCapture({
             ? { warning: false, text: "Detecting your current location…" }
             : {
                 warning: false,
-                text: "Click below, or allow location access when prompted, to capture the visit location.",
+                text: "Click below to auto-capture GPS coordinates, or just type the location in underneath.",
               };
 
   return (
@@ -320,7 +334,7 @@ export function LeadFormDialog() {
           error.code === error.PERMISSION_DENIED
             ? "Location permission denied — enable it to capture the visit location"
             : error.code === error.POSITION_UNAVAILABLE
-              ? "Couldn't get your location — check that Location Services are turned on for this browser in your system settings"
+              ? `Couldn't get your location — ${positionUnavailableHint()}. You can also just type the location in below.`
               : "Couldn't get the current location — please try again",
         );
       }
@@ -504,6 +518,16 @@ export function LeadFormDialog() {
                     captureLocation();
                   }}
                 />
+                {gpsLatitude == null ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="visitLocation">Location (type it in if GPS isn&apos;t available)</Label>
+                    <Input
+                      id="visitLocation"
+                      placeholder="e.g. Sector 44, Gurugram"
+                      {...register("visitLocation")}
+                    />
+                  </div>
+                ) : null}
               </FormSection>
             </div>
 

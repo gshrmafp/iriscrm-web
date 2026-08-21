@@ -14,11 +14,14 @@ type CreateUserPayload =
   paths["/users"]["post"]["requestBody"]["content"]["application/json"];
 type CreatePermissionOverridePayload =
   paths["/users/{id}/permission-overrides"]["post"]["requestBody"]["content"]["application/json"];
+type UpdateUserPayload =
+  paths["/users/{id}"]["patch"]["requestBody"]["content"]["application/json"];
 
 export type {
   CreateRegionPayload,
   CreateUserPayload,
   CreatePermissionOverridePayload,
+  UpdateUserPayload,
 };
 
 export async function listRegions(): Promise<Region[]> {
@@ -83,6 +86,16 @@ export async function updateUserStatus(
   payload: { status: "ACTIVE" | "INACTIVE" },
 ): Promise<User> {
   const { data } = await apiClient.patch<User>(`/users/${id}/status`, payload);
+  return data;
+}
+
+export async function getUser(id: string): Promise<User> {
+  const { data } = await apiClient.get<User>(`/users/${id}`);
+  return data;
+}
+
+export async function updateUser(id: string, payload: UpdateUserPayload): Promise<User> {
+  const { data } = await apiClient.patch<User>(`/users/${id}`, payload);
   return data;
 }
 
