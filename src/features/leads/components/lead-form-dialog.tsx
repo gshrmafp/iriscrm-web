@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -126,6 +126,7 @@ function LocationCapture({
   autoCaptureFailed,
   insecureContext,
   onCapture,
+  visitLocationField,
 }: {
   locating: boolean;
   gpsLatitude?: number;
@@ -137,6 +138,7 @@ function LocationCapture({
   autoCaptureFailed: boolean;
   insecureContext: boolean;
   onCapture: () => void;
+  visitLocationField: UseFormRegisterReturn;
 }) {
   const captured = gpsLatitude != null && gpsLongitude != null;
 
@@ -217,6 +219,12 @@ function LocationCapture({
           <MapPin className="size-3.5" />
           {locating ? "Locating…" : "Capture current location"}
         </Button>
+        <div className="space-y-1.5 pt-1">
+          <Label htmlFor="visitLocation" className="text-xs text-muted-foreground">
+            Or type it in
+          </Label>
+          <Input id="visitLocation" placeholder="e.g. Sector 44, Gurugram" {...visitLocationField} />
+        </div>
       </div>
     </div>
   );
@@ -343,11 +351,16 @@ export function LeadFormDialog() {
     navigator.geolocation.getCurrentPosition(
       onSuccess,
       (error) => {
-        // A high-accuracy GPS fix can time out on machines with no real GPS
-        // chip (most laptops rely on slower Wi-Fi-based positioning) — retry
-        // once with network-based positioning and a longer timeout before
-        // giving up.
-        if (error.code === error.TIMEOUT) {
+        // A high-accuracy GPS fix can fail on machines with no real GPS chip
+        // (most laptops rely on slower Wi-Fi-based positioning) — either by
+        // timing out OR by the OS reporting POSITION_UNAVAILABLE outright.
+        // Retrying only on TIMEOUT (as before) meant every attempt that
+        // failed fast with POSITION_UNAVAILABLE never got the network-based
+        // fallback — which is exactly why this worked once and then
+        // appeared to "stop working": the first fix likely came from a
+        // cached/lucky reading, and every attempt after failed fast with no
+        // retry.
+        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
           navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
             enableHighAccuracy: false,
             timeout: 15000,
@@ -517,17 +530,8 @@ export function LeadFormDialog() {
                     setAutoCaptureUnavailable(false);
                     captureLocation();
                   }}
+                  visitLocationField={register("visitLocation")}
                 />
-                {gpsLatitude == null ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="visitLocation">Location (type it in if GPS isn&apos;t available)</Label>
-                    <Input
-                      id="visitLocation"
-                      placeholder="e.g. Sector 44, Gurugram"
-                      {...register("visitLocation")}
-                    />
-                  </div>
-                ) : null}
               </FormSection>
             </div>
 

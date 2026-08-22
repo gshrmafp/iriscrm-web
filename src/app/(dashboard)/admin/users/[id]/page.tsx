@@ -88,9 +88,16 @@ export default function UserDetailsPage({
     }
   }, [user, reset]);
 
+  // Keep the user's currently-assigned region visible/selectable even if
+  // it's since been deactivated (so the picker doesn't render blank) — just
+  // don't offer other inactive regions as new choices.
+  const currentRegionId = watch("regionId");
   const regionOptions: ComboboxOption[] = useMemo(
-    () => regions.map((region) => ({ value: region.id, label: region.name, description: region.code })),
-    [regions],
+    () =>
+      regions
+        .filter((region) => region.active || region.id === currentRegionId)
+        .map((region) => ({ value: region.id, label: region.name, description: region.code })),
+    [regions, currentRegionId],
   );
   const managerOptions: ComboboxOption[] = useMemo(
     () =>

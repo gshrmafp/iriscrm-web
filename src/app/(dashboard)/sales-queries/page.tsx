@@ -8,7 +8,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { PaginationBar } from "@/components/data-table/pagination-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge, queryPriorityTone, salesQueryStatusTone } from "@/components/status-badge";
-import { SalesQueryFormSheet } from "@/features/sales-queries/components/sales-query-form-sheet";
+import { SalesQueryFormDialog } from "@/features/sales-queries/components/sales-query-form-dialog";
 import { QueryKanbanBoard } from "@/features/sales-queries/components/query-kanban-board";
 import { QueryFiltersBar } from "@/features/sales-queries/components/query-filters-bar";
 import { useSalesQueries } from "@/features/sales-queries/hooks";
@@ -61,7 +61,7 @@ export default function SalesQueriesPage() {
       <PageHeader
         title="Sales Queries"
         description="Customer requirements captured from the field, tracked until resolved."
-        actions={<SalesQueryFormSheet />}
+        actions={<SalesQueryFormDialog />}
       />
       <QueryFiltersBar filters={filters} onChange={handleFiltersChange} />
       <Tabs defaultValue="board">

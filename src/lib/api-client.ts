@@ -59,6 +59,31 @@ apiClient.interceptors.response.use(
       | undefined;
 
     const isAuthRoute = originalRequest?.url?.includes("/auth/");
+    const errorBody = error.response?.data as
+      | { success: false; error: ApiErrorBody }
+      | undefined;
+    const errorCode = errorBody?.error?.code;
+
+    // requireAuth re-checks live user/region status on every request (not
+    // just login/refresh) — these two codes mean the *account* or *region*
+    // was deactivated, not a routine expired-token 401, so they skip the
+    // normal refresh-and-retry flow entirely (refreshing wouldn't help;
+    // identityService.refresh re-checks the same status).
+    if (errorCode === "ACCOUNT_INACTIVE") {
+      clearTokens();
+      if (typeof window !== "undefined") {
+        window.location.href = "/login?reason=inactive";
+      }
+      return Promise.reject(error);
+    }
+    if (errorCode === "REGION_INACTIVE") {
+      // Tokens are kept (not cleared) — if the region is reactivated later,
+      // the user shouldn't be forced to log back in.
+      if (typeof window !== "undefined") {
+        window.location.href = "/region-inactive";
+      }
+      return Promise.reject(error);
+    }
 
     if (
       error.response?.status === 401 &&

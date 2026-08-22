@@ -55,8 +55,13 @@ export function UserFormSheet() {
   const { data: regions } = useRegions();
   const { data: users = [] } = useUserDirectory();
 
+  // Creating a new user — there's no existing region value to preserve, so
+  // deactivated regions are simply not offered.
   const regionOptions: ComboboxOption[] = useMemo(
-    () => (regions ?? []).map((region) => ({ value: region.id, label: region.name, description: region.code })),
+    () =>
+      (regions ?? [])
+        .filter((region) => region.active)
+        .map((region) => ({ value: region.id, label: region.name, description: region.code })),
     [regions],
   );
 

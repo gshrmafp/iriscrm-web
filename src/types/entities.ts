@@ -470,10 +470,19 @@ export interface QueryFollowUp {
 }
 
 export type NotificationType =
+  | "QUERY_CREATED"
   | "QUERY_ASSIGNED"
   | "QUERY_STATUS_CHANGED"
   | "QUERY_COMMENT_ADDED"
-  | "QUERY_MENTIONED";
+  | "QUERY_MENTIONED"
+  | "QUERY_CLOSED"
+  | "QUERY_PRIORITY_CHANGED"
+  | "QUERY_ATTACHMENT_UPLOADED"
+  | "QUERY_DUE_DATE_UPDATED"
+  | "FOLLOW_UP_DUE"
+  | "FOLLOW_UP_OVERDUE"
+  // Shared by Lead and Opportunity @mentions (EntityComment).
+  | "ENTITY_MENTIONED";
 
 export interface Notification {
   id: string;

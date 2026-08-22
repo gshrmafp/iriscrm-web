@@ -16,7 +16,7 @@ import { AttachmentUpload } from "@/features/sales-queries/components/attachment
 import { StatusChangeDialog } from "@/features/sales-queries/components/status-change-dialog";
 import { AssignDepartmentDialog } from "@/features/sales-queries/components/assign-department-dialog";
 import { ReassignOwnerDialog } from "@/features/sales-queries/components/reassign-owner-dialog";
-import { SalesQueryFormSheet } from "@/features/sales-queries/components/sales-query-form-sheet";
+import { SalesQueryFormDialog } from "@/features/sales-queries/components/sales-query-form-dialog";
 import { FollowUpFormDialog } from "@/features/sales-queries/components/follow-up-form-dialog";
 import { FollowUpList } from "@/features/sales-queries/components/follow-up-list";
 
@@ -44,7 +44,7 @@ export default function SalesQueryDetailPage({
         description={`${query.refNo} · ${query.companyName ?? "—"}`}
         actions={
           <>
-            {permissions.canEdit && !isTerminal ? <SalesQueryFormSheet query={query} /> : null}
+            {permissions.canEdit && !isTerminal ? <SalesQueryFormDialog query={query} /> : null}
             {permissions.canReassignOwner ? (
               <ReassignOwnerDialog
                 queryId={query.id}

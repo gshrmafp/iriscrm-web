@@ -15,7 +15,15 @@ export function useCatalogItems(filters: api.ListCatalogItemsFilters = {}) {
 
 // The catalog is a small, fixed reference dataset — pickers (quotation
 // builder, price rules, win dialog) need the full list, not one page of it.
-const ALL_ITEMS_FILTERS: api.ListCatalogItemsFilters = { pageSize: 500, sortBy: "name", sortOrder: "asc" };
+// active:true excludes deactivated items from those pickers — the admin
+// catalog management table uses useCatalogItems() (below) instead, which
+// doesn't set this, so admins can still see/reactivate inactive items there.
+const ALL_ITEMS_FILTERS: api.ListCatalogItemsFilters = {
+  pageSize: 500,
+  sortBy: "name",
+  sortOrder: "asc",
+  active: true,
+};
 
 export function useAllCatalogItems() {
   const query = useQuery({
