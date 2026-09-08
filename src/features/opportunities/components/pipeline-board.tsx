@@ -76,6 +76,7 @@ const DEAL_TYPE_META: Record<Opportunity["dealType"], { label: string; icon: typ
   INSTALLATION: { label: "Installation", icon: Wrench },
   AMC: { label: "AMC", icon: ShieldCheck },
   PRODUCT: { label: "Product", icon: Package },
+  MAINTENANCE: { label: "Maintenance", icon: Wrench },
 };
 
 function formatInr(value: number) {

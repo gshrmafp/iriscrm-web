@@ -90,3 +90,64 @@ export async function qualifyLead(
   );
   return data;
 }
+
+// ---------- Stepped lead creation ----------
+
+export interface Step1Payload {
+  companyName: string;
+  remarks?: string;
+  gpsLatitude?: number;
+  gpsLongitude?: number;
+  visitLocation?: string;
+}
+
+export interface Step2Payload {
+  contactName: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  discussionNote?: string;
+}
+
+export type Step3Payload =
+  | { path: "NOT_QUALIFIED"; remark: string }
+  | { path: "FUTURE_POTENTIAL"; followUpDate: string; remarks?: string }
+  | {
+      path: "REQUIREMENT_IDENTIFIED";
+      dealType: "INSTALLATION" | "AMC" | "MAINTENANCE";
+      quotationRef: string;
+      quotationDate: string;
+      quotationAmount: number;
+    };
+
+export async function createLeadStep1(
+  payload: Step1Payload,
+): Promise<{ lead: Lead }> {
+  const { data } = await apiClient.post<{ lead: Lead }>(
+    "/leads/stepped",
+    payload,
+  );
+  return data;
+}
+
+export async function saveLeadStep2(
+  id: string,
+  payload: Step2Payload,
+): Promise<{ lead: Lead; duplicateWarning?: string[] }> {
+  const { data } = await apiClient.patch<{
+    lead: Lead;
+    duplicateWarning?: string[];
+  }>(`/leads/${id}/step-2`, payload);
+  return data;
+}
+
+export async function saveLeadStep3(
+  id: string,
+  payload: Step3Payload,
+): Promise<{ lead: Lead; opportunity?: Opportunity; followUp?: FollowUp }> {
+  const { data } = await apiClient.patch<{
+    lead: Lead;
+    opportunity?: Opportunity;
+    followUp?: FollowUp;
+  }>(`/leads/${id}/step-3`, payload);
+  return data;
+}

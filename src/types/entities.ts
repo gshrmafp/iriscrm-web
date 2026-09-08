@@ -82,7 +82,7 @@ export interface FollowUp {
 export interface Lead {
   id: string;
   refNo: string;
-  contactName: string;
+  contactName?: string | null;
   companyName?: string;
   contactPhone?: string;
   contactEmail?: string;
@@ -90,13 +90,20 @@ export interface Lead {
   gpsLatitude?: number | string | null;
   gpsLongitude?: number | string | null;
   visitLocation?: string | null;
-  source: LeadSource;
+  source?: LeadSource | null;
   sourceOther?: string | null;
   productInterest?: string;
   productInterestOther?: string | null;
   notes?: string;
   status: LeadStatus;
   lostReason?: string | null;
+  currentStep?: number;
+  step1CompletedAt?: string | null;
+  step2CompletedAt?: string | null;
+  step3CompletedAt?: string | null;
+  remarks?: string | null;
+  discussionNote?: string | null;
+  qualificationPath?: string | null;
   regionId: string;
   ownerId: string;
   createdBy: string;
@@ -105,7 +112,7 @@ export interface Lead {
   followUps?: FollowUp[];
 }
 
-export type DealType = "INSTALLATION" | "AMC" | "PRODUCT";
+export type DealType = "INSTALLATION" | "AMC" | "PRODUCT" | "MAINTENANCE";
 
 export type OpportunityStage =
   | "NEW"
@@ -139,6 +146,9 @@ export interface Opportunity {
   lostReason?: string | null;
   createdAt: string;
   updatedAt: string;
+  initialQuotationRef?: string | null;
+  initialQuotationDate?: string | null;
+  initialQuotationAmount?: string | null;
   stageHistory?: StageHistoryEntry[];
   quotations?: Quotation[];
 }

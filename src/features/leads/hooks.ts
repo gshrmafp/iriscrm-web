@@ -74,3 +74,38 @@ export function useQualifyLead(id: string) {
     },
   });
 }
+
+// ---------- Stepped lead creation ----------
+
+export function useCreateLeadStep1() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createLeadStep1,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.all });
+    },
+  });
+}
+
+export function useSaveLeadStep2(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: api.Step2Payload) => api.saveLeadStep2(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.all });
+    },
+  });
+}
+
+export function useSaveLeadStep3(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: api.Step3Payload) => api.saveLeadStep3(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["opportunities"] });
+    },
+  });
+}

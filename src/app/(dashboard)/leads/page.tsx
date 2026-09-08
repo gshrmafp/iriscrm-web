@@ -8,7 +8,9 @@ import { DataTable } from "@/components/data-table/data-table";
 import { PaginationBar } from "@/components/data-table/pagination-bar";
 import { StatusBadge, leadStatusTone } from "@/components/status-badge";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
-import { LeadFormDialog } from "@/features/leads/components/lead-form-dialog";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useLeads, useLeadStatusSummary } from "@/features/leads/hooks";
 import { usePicklistLabelResolver } from "@/features/picklists/hooks";
 import { useUserDirectory } from "@/features/identity/hooks";
@@ -32,7 +34,20 @@ function useColumns(nameFor: (id: string) => string): ColumnDef<Lead>[] {
   const resolveLabel = usePicklistLabelResolver();
   return [
     { accessorKey: "refNo", header: "Ref #" },
-    { accessorKey: "contactName", header: "Contact" },
+    {
+      accessorKey: "contactName",
+      header: "Contact",
+      cell: ({ row }) => (
+        <span className="flex items-center gap-1.5">
+          {row.original.contactName || <span className="italic text-muted-foreground">Pending</span>}
+          {(row.original.currentStep ?? 3) < 3 && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-300">
+              Draft
+            </Badge>
+          )}
+        </span>
+      ),
+    },
     { accessorKey: "companyName", header: "Company" },
     {
       accessorKey: "productInterest",
@@ -95,7 +110,12 @@ export default function LeadsPage() {
       <PageHeader
         title="Leads"
         description="Capture and qualify inbound leads and enquiries."
-        actions={<LeadFormDialog />}
+        actions={
+          <Button size="sm" onClick={() => router.push("/leads/new")}>
+            <Plus className="size-4" />
+            New Lead
+          </Button>
+        }
       />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <input
