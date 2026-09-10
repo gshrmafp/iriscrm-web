@@ -286,7 +286,7 @@ export interface paths {
                     pageSize?: number;
                     sortBy?: "createdAt" | "updatedAt" | "value" | "expectedClose";
                     sortOrder?: "asc" | "desc";
-                    stage?: "NEW" | "CONTACTED" | "QUOTED" | "NEGOTIATION" | "WON" | "LOST";
+                    stage?: "NEW" | "CONTACTED" | "QUALIFIED" | "QUOTED" | "NEGOTIATION" | "MEETING" | "WON" | "LOST";
                     dealType?: "INSTALLATION" | "AMC" | "PRODUCT";
                     ownerId?: string;
                     dateFrom?: string;
@@ -417,7 +417,7 @@ export interface paths {
                          * @example CONTACTED
                          * @enum {string}
                          */
-                        toStage: "NEW" | "CONTACTED" | "QUOTED" | "NEGOTIATION" | "WON" | "LOST";
+                        toStage: "NEW" | "CONTACTED" | "QUALIFIED" | "QUOTED" | "NEGOTIATION" | "MEETING" | "WON" | "LOST";
                         remark?: string;
                     };
                 };

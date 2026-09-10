@@ -21,16 +21,27 @@ import {
   User,
   CheckCircle2,
   XCircle,
-  Calendar,
-  FileText,
   Clock,
+  FileText,
+  Phone,
+  CalendarCheck,
+  ShoppingCart,
+  type LucideIcon,
 } from "lucide-react";
+import type { OpportunityStage, StageHistoryEntry } from "@/types/entities";
 
 const QUAL_PATH_LABELS: Record<string, { label: string; tone: string }> = {
   NOT_QUALIFIED: { label: "Not Qualified", tone: "text-red-600" },
   FUTURE_POTENTIAL: { label: "Future Potential", tone: "text-blue-600" },
   REQUIREMENT_IDENTIFIED: { label: "Requirement Identified", tone: "text-emerald-600" },
 };
+
+const PIPELINE_STAGES: { stage: OpportunityStage; title: string; icon: LucideIcon }[] = [
+  { stage: "QUOTED", title: "Quotation", icon: FileText },
+  { stage: "NEGOTIATION", title: "Follow-ups", icon: Phone },
+  { stage: "MEETING", title: "Meeting", icon: CalendarCheck },
+  { stage: "WON", title: "PO (Purchase Order)", icon: ShoppingCart },
+];
 
 function formatStepDate(iso?: string | null) {
   if (!iso) return null;
@@ -43,12 +54,33 @@ function formatStepDate(iso?: string | null) {
   });
 }
 
+interface JourneyStep {
+  key: string;
+  title: string;
+  icon: LucideIcon;
+  completed: boolean;
+  completedAt?: string | null;
+  failed?: boolean;
+  details: { label: string; value?: string; tone?: string }[];
+}
+
 function LeadJourney({ lead }: { lead: Lead }) {
-  const steps = [
+  const opp = lead.opportunity;
+  const history = opp?.stageHistory ?? [];
+  const historyByStage = new Map<string, StageHistoryEntry>();
+  for (const h of history) {
+    historyByStage.set(h.toStage, h);
+  }
+
+  const isNotQualified = lead.qualificationPath === "NOT_QUALIFIED";
+  const isFuturePotential = lead.qualificationPath === "FUTURE_POTENTIAL";
+
+  const steps: JourneyStep[] = [
     {
-      num: 1,
-      title: "Site Visit",
+      key: "site-visit",
+      title: "New Visit / Lead",
       icon: MapPin,
+      completed: !!lead.step1CompletedAt,
       completedAt: lead.step1CompletedAt,
       details: [
         { label: "Company", value: lead.companyName },
@@ -60,9 +92,10 @@ function LeadJourney({ lead }: { lead: Lead }) {
       ],
     },
     {
-      num: 2,
-      title: "Contact Details",
+      key: "contact",
+      title: "Contacted",
       icon: User,
+      completed: !!lead.step2CompletedAt,
       completedAt: lead.step2CompletedAt,
       details: [
         ...(lead.contactName ? [{ label: "Name", value: lead.contactName }] : []),
@@ -72,18 +105,53 @@ function LeadJourney({ lead }: { lead: Lead }) {
       ],
     },
     {
-      num: 3,
-      title: "Qualification",
-      icon: lead.qualificationPath === "NOT_QUALIFIED" ? XCircle : CheckCircle2,
+      key: "qualified",
+      title: "Qualified",
+      icon: isNotQualified ? XCircle : CheckCircle2,
+      completed: !!lead.step3CompletedAt,
       completedAt: lead.step3CompletedAt,
+      failed: isNotQualified,
       details: lead.qualificationPath
         ? [
-            { label: "Outcome", value: QUAL_PATH_LABELS[lead.qualificationPath]?.label ?? lead.qualificationPath },
+            {
+              label: "Outcome",
+              value: QUAL_PATH_LABELS[lead.qualificationPath]?.label ?? lead.qualificationPath,
+              tone: QUAL_PATH_LABELS[lead.qualificationPath]?.tone,
+            },
             ...(lead.lostReason ? [{ label: "Reason", value: lead.lostReason }] : []),
           ]
         : [],
     },
   ];
+
+  if (!isNotQualified && !isFuturePotential) {
+    for (const ps of PIPELINE_STAGES) {
+      const histEntry = historyByStage.get(ps.stage);
+      const isCurrentOrPast = opp && stageIndex(opp.stage) >= stageIndex(ps.stage);
+      const isLost = opp?.stage === "LOST";
+      const completed = !!histEntry || (isCurrentOrPast && !isLost);
+
+      const details: { label: string; value?: string; tone?: string }[] = [];
+      if (ps.stage === "QUOTED" && opp?.initialQuotationRef) {
+        details.push({ label: "Quotation", value: opp.initialQuotationRef });
+        if (opp.initialQuotationAmount) {
+          details.push({ label: "Amount", value: `₹${Number(opp.initialQuotationAmount).toLocaleString("en-IN")}` });
+        }
+      }
+      if (ps.stage === "WON" && opp?.wonAt) {
+        details.push({ label: "Won on", value: formatStepDate(opp.wonAt) ?? "" });
+      }
+
+      steps.push({
+        key: ps.stage,
+        title: ps.title,
+        icon: ps.icon,
+        completed: !!completed,
+        completedAt: histEntry?.createdAt,
+        details,
+      });
+    }
+  }
 
   return (
     <Card>
@@ -93,63 +161,56 @@ function LeadJourney({ lead }: { lead: Lead }) {
       <CardContent>
         <div className="relative space-y-0">
           {steps.map((step, i) => {
-            const completed = !!step.completedAt;
             const isLast = i === steps.length - 1;
             const StepIcon = step.icon;
-            const qualTone = step.num === 3 && lead.qualificationPath
-              ? QUAL_PATH_LABELS[lead.qualificationPath]?.tone
-              : undefined;
 
             return (
-              <div key={step.num} className="relative flex gap-4 pb-6 last:pb-0">
-                {/* Vertical connector line */}
+              <div key={step.key} className="relative flex gap-4 pb-6 last:pb-0">
                 {!isLast && (
                   <div
                     className={`absolute left-[15px] top-[32px] bottom-0 w-0.5 ${
-                      completed ? "bg-emerald-300" : "bg-border"
+                      step.completed ? "bg-emerald-300" : "bg-border"
                     }`}
                   />
                 )}
-                {/* Step dot */}
                 <div
                   className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full ${
-                    completed
-                      ? step.num === 3 && lead.qualificationPath === "NOT_QUALIFIED"
+                    step.completed
+                      ? step.failed
                         ? "bg-red-100 text-red-600"
                         : "bg-emerald-100 text-emerald-600"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {completed ? (
+                  {step.completed ? (
                     <StepIcon className="size-4" />
                   ) : (
-                    <span className="text-xs font-bold">{step.num}</span>
+                    <StepIcon className="size-3.5" />
                   )}
                 </div>
-                {/* Step content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold">{step.title}</span>
-                    {completed && (
+                    {step.completed && step.completedAt && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="size-3" />
                         {formatStepDate(step.completedAt)}
                       </span>
                     )}
                   </div>
-                  {completed && step.details.length > 0 && (
+                  {step.completed && step.details.length > 0 && (
                     <div className="mt-2 space-y-1.5 rounded-lg bg-muted/40 p-3 text-sm">
                       {step.details.map((d) => (
                         <div key={d.label} className="flex gap-2">
                           <span className="shrink-0 text-muted-foreground w-20">{d.label}</span>
-                          <span className={`flex-1 ${step.num === 3 && d.label === "Outcome" ? qualTone : ""}`}>
+                          <span className={`flex-1 ${d.tone ?? ""}`}>
                             {d.value}
                           </span>
                         </div>
                       ))}
                     </div>
                   )}
-                  {!completed && (
+                  {!step.completed && (
                     <p className="mt-1 text-xs text-muted-foreground italic">Pending</p>
                   )}
                 </div>
@@ -160,6 +221,12 @@ function LeadJourney({ lead }: { lead: Lead }) {
       </CardContent>
     </Card>
   );
+}
+
+const STAGE_ORDER: OpportunityStage[] = ["NEW", "CONTACTED", "QUALIFIED", "QUOTED", "NEGOTIATION", "MEETING", "WON", "LOST"];
+function stageIndex(stage: OpportunityStage): number {
+  const idx = STAGE_ORDER.indexOf(stage);
+  return idx === -1 ? -1 : idx;
 }
 
 export default function LeadDetailPage({

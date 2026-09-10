@@ -21,45 +21,53 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import type { Opportunity, OpportunityStage } from "@/types/entities";
 import type { OpportunityPipelineSummary } from "@/features/opportunities/api";
 
-// Mirrors the backend's FORWARD map (Irisbackend/src/modules/sales/opportunities/pipeline.ts) —
-// WON is intentionally absent here since it only happens via the dedicated
-// Win flow (collects customer/site/BOM/AMC details), never a plain stage PATCH.
 const NEXT_STAGE: Partial<Record<OpportunityStage, OpportunityStage>> = {
   NEW: "CONTACTED",
-  CONTACTED: "QUOTED",
+  CONTACTED: "QUALIFIED",
+  QUALIFIED: "QUOTED",
   QUOTED: "NEGOTIATION",
+  NEGOTIATION: "MEETING",
 };
 
-// Eligible to close Won directly, per opportunityService.win()'s own check.
-const CAN_WIN: OpportunityStage[] = ["QUOTED", "NEGOTIATION"];
-const CAN_LOSE: OpportunityStage[] = ["NEW", "CONTACTED", "QUOTED", "NEGOTIATION"];
+const CAN_WIN: OpportunityStage[] = ["QUOTED", "NEGOTIATION", "MEETING"];
+const CAN_LOSE: OpportunityStage[] = ["NEW", "CONTACTED", "QUALIFIED", "QUOTED", "NEGOTIATION", "MEETING"];
 
 const STAGE_META: Record<
   OpportunityStage,
   { label: string; accent: string; chip: string }
 > = {
   NEW: {
-    label: "New",
+    label: "New Visit / Lead",
     accent: "bg-info",
     chip: "bg-info/10 text-info dark:bg-info/15",
   },
   CONTACTED: {
     label: "Contacted",
-    accent: "bg-info",
-    chip: "bg-info/10 text-info dark:bg-info/15",
+    accent: "bg-purple",
+    chip: "bg-purple/10 text-purple dark:bg-purple/15",
+  },
+  QUALIFIED: {
+    label: "Qualified",
+    accent: "bg-teal",
+    chip: "bg-teal/10 text-teal dark:bg-teal/15",
   },
   QUOTED: {
-    label: "Quoted",
+    label: "Quotation",
     accent: "bg-warning",
     chip: "bg-warning/15 text-warning-foreground dark:bg-warning/20 dark:text-warning",
   },
   NEGOTIATION: {
-    label: "Negotiation",
-    accent: "bg-warning",
-    chip: "bg-warning/15 text-warning-foreground dark:bg-warning/20 dark:text-warning",
+    label: "Follow-ups",
+    accent: "bg-orange-500",
+    chip: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  },
+  MEETING: {
+    label: "Meeting",
+    accent: "bg-indigo-500",
+    chip: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
   },
   WON: {
-    label: "Won",
+    label: "PO (Purchase Order)",
     accent: "bg-success",
     chip: "bg-success/10 text-success dark:bg-success/15",
   },
@@ -70,7 +78,7 @@ const STAGE_META: Record<
   },
 };
 
-const STAGES: OpportunityStage[] = ["NEW", "CONTACTED", "QUOTED", "NEGOTIATION", "WON", "LOST"];
+const STAGES: OpportunityStage[] = ["NEW", "CONTACTED", "QUALIFIED", "QUOTED", "NEGOTIATION", "MEETING", "WON"];
 
 const DEAL_TYPE_META: Record<Opportunity["dealType"], { label: string; icon: typeof Wrench }> = {
   INSTALLATION: { label: "Installation", icon: Wrench },
@@ -162,7 +170,7 @@ function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
               triggerContent={
                 <>
                   <Trophy className="size-3" />
-                  Win
+                  PO
                 </>
               }
             />
@@ -190,59 +198,74 @@ export function PipelineBoard({
   summary?: OpportunityPipelineSummary;
 }) {
   const summaryByStage = new Map(summary?.byStage.map((s) => [s.stage, s]));
+  const lostItems = opportunities.filter((o) => o.stage === "LOST");
+  const lostSummary = summaryByStage.get("LOST");
+  const lostCount = lostSummary?.count ?? lostItems.length;
+  const lostValue = lostSummary?.value ?? lostItems.reduce((sum, o) => sum + Number(o.value), 0);
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-      {STAGES.map((stage) => {
-        const items = opportunities.filter((o) => o.stage === stage);
-        const meta = STAGE_META[stage];
-        // Count/value come from the backend summary when available (accurate
-        // across the whole scope, not just whatever page of items is loaded
-        // client-side) — falls back to the loaded items if summary isn't ready yet.
-        const stageSummary = summaryByStage.get(stage);
-        const count = stageSummary?.count ?? items.length;
-        const value = stageSummary?.value ?? items.reduce((sum, o) => sum + Number(o.value), 0);
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+        {STAGES.map((stage) => {
+          const items = opportunities.filter((o) => o.stage === stage);
+          const meta = STAGE_META[stage];
+          const stageSummary = summaryByStage.get(stage);
+          const count = stageSummary?.count ?? items.length;
+          const value = stageSummary?.value ?? items.reduce((sum, o) => sum + Number(o.value), 0);
 
-        return (
-          <div key={stage} className="flex h-[calc(100vh-260px)] min-w-0 flex-col rounded-xl bg-muted/30">
-            <div className={cn("h-1 shrink-0 rounded-t-xl", meta.accent)} />
-            <div className="shrink-0 p-2.5 pb-1.5">
-              <div className="mb-2 flex items-center justify-between">
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-xs font-semibold",
-                    meta.chip,
-                  )}
-                >
-                  {meta.label}
-                </span>
-                <span className="text-xs font-medium text-muted-foreground">{count}</span>
+          return (
+            <div key={stage} className="flex h-[calc(100vh-280px)] min-w-0 flex-col rounded-xl bg-muted/30">
+              <div className={cn("h-1 shrink-0 rounded-t-xl", meta.accent)} />
+              <div className="shrink-0 p-2.5 pb-1.5">
+                <div className="mb-2 flex items-center justify-between">
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[11px] font-semibold leading-tight",
+                      meta.chip,
+                    )}
+                  >
+                    {meta.label}
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">{count}</span>
+                </div>
+                {value > 0 ? (
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Building2 className="size-3" />
+                    {formatInr(value)}
+                  </p>
+                ) : null}
               </div>
-              {value > 0 ? (
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Building2 className="size-3" />
-                  {formatInr(value)}
-                </p>
-              ) : null}
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-2.5 pb-2.5">
+                {items.map((opportunity) => (
+                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+                ))}
+                {items.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
+                    No opportunities
+                  </p>
+                ) : null}
+                {count > items.length ? (
+                  <p className="pt-1 pb-1 text-center text-xs text-muted-foreground">
+                    +{count - items.length} more not shown
+                  </p>
+                ) : null}
+              </div>
             </div>
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-2.5 pb-2.5">
-              {items.map((opportunity) => (
-                <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-              ))}
-              {items.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
-                  No opportunities
-                </p>
-              ) : null}
-              {count > items.length ? (
-                <p className="pt-1 pb-1 text-center text-xs text-muted-foreground">
-                  +{count - items.length} more not shown
-                </p>
-              ) : null}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {/* Lost summary bar */}
+      {lostCount > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-2.5">
+          <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", STAGE_META.LOST.chip)}>
+            Lost
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {lostCount} opportunities · {formatInr(lostValue)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

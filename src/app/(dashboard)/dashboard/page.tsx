@@ -49,18 +49,22 @@ const TONE_ICON_CLASSES: Record<Tone, string> = {
 const STAGE_ACCENT: Record<OpportunityStage, { tone: Tone; bar: string; badge: "info" | "purple" | "warning" | "teal" | "success" | "danger" }> = {
   NEW: { tone: "info", bar: "bg-info", badge: "info" },
   CONTACTED: { tone: "purple", bar: "bg-purple", badge: "purple" },
+  QUALIFIED: { tone: "teal", bar: "bg-teal", badge: "teal" },
   QUOTED: { tone: "warning", bar: "bg-warning", badge: "warning" },
-  NEGOTIATION: { tone: "teal", bar: "bg-teal", badge: "teal" },
+  NEGOTIATION: { tone: "warning", bar: "bg-orange-500", badge: "warning" },
+  MEETING: { tone: "purple", bar: "bg-indigo-500", badge: "purple" },
   WON: { tone: "success", bar: "bg-success", badge: "success" },
   LOST: { tone: "danger", bar: "bg-danger", badge: "danger" },
 };
 
 const STAGE_LABELS: Record<OpportunityStage, string> = {
-  NEW: "New",
+  NEW: "New Visit",
   CONTACTED: "Contacted",
-  QUOTED: "Quoted",
-  NEGOTIATION: "Negotiation",
-  WON: "Won",
+  QUALIFIED: "Qualified",
+  QUOTED: "Quotation",
+  NEGOTIATION: "Follow-ups",
+  MEETING: "Meeting",
+  WON: "PO",
   LOST: "Lost",
 };
 

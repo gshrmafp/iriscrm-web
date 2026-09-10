@@ -110,6 +110,7 @@ export interface Lead {
   createdAt: string;
   updatedAt: string;
   followUps?: FollowUp[];
+  opportunity?: Opportunity | null;
 }
 
 export type DealType = "INSTALLATION" | "AMC" | "PRODUCT" | "MAINTENANCE";
@@ -117,8 +118,10 @@ export type DealType = "INSTALLATION" | "AMC" | "PRODUCT" | "MAINTENANCE";
 export type OpportunityStage =
   | "NEW"
   | "CONTACTED"
+  | "QUALIFIED"
   | "QUOTED"
   | "NEGOTIATION"
+  | "MEETING"
   | "WON"
   | "LOST";
 
