@@ -93,7 +93,7 @@ function LoginForm() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-50">
       {/* =====================================================
-          BACKGROUND DECORATION
+          BACKGROUND DECORATION ok
       ===================================================== */}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
