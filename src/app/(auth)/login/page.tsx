@@ -579,9 +579,6 @@ function LoginForm() {
             </CardContent>
           </Card>
 
-          {/* =================================================
-              FOOTER
-          ================================================= */}
 
           <div className="mt-6 text-center">
             <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
