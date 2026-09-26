@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { DataTable } from "@/components/data-table/data-table";
 import { PaginationBar } from "@/components/data-table/pagination-bar";
-import { StatusBadge, leadStatusTone } from "@/components/status-badge";
+import { StatusBadge, leadStatusTone, opportunityStageTone } from "@/components/status-badge";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,25 @@ import { useLeads, useLeadStatusSummary } from "@/features/leads/hooks";
 import { useUserDirectory } from "@/features/identity/hooks";
 import { useAuth } from "@/features/auth/AuthProvider";
 import type { ListLeadsFilters } from "@/features/leads/api";
-import type { Lead, LeadStatus } from "@/types/entities";
+import type { Lead, LeadStageFilter, LeadStatus } from "@/types/entities";
+
+// Folds Opportunity.stage's FOLLOWUP sub-step into "Quotation" (Meeting is
+// now its own distinct stage), same as the Lead Journey accordion on the
+// Lead Detail page (QUOTATION_STAGE_ALIASES).
+const QUOTATION_STAGE_ALIASES = ["QUOTATION", "FOLLOWUP"];
+
+function deriveLeadStage(lead: Lead): { label: string; tone: Parameters<typeof StatusBadge>[0]["tone"] } {
+  const oppStage = lead.opportunity?.stage;
+  if (lead.status === "LOST" || oppStage === "LOST") return { label: "Lost", tone: "danger" };
+  if (oppStage === "PURCHASE_ORDER") return { label: "PO (Purchase Order)", tone: opportunityStageTone("PURCHASE_ORDER") };
+  if (oppStage === "MEETING") return { label: "Meeting", tone: opportunityStageTone("MEETING") };
+  if (oppStage && QUOTATION_STAGE_ALIASES.includes(oppStage)) {
+    return { label: "Quotation", tone: opportunityStageTone("QUOTATION") };
+  }
+  if (lead.status === "QUALIFIED") return { label: "Qualified", tone: leadStatusTone("QUALIFIED") };
+  if ((lead.currentStep ?? 1) >= 2) return { label: "Contacted", tone: leadStatusTone("NEW") };
+  return { label: "New Visit / Lead", tone: leadStatusTone("NEW") };
+}
 
 // Admins/managers can see every lead in their region already (server-enforced
 // in leadService.list's scopeWhere) — this just controls whether the "view
@@ -28,6 +46,22 @@ const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
   { value: "QUALIFIED", label: "Qualified" },
   { value: "LOST", label: "Lost" },
 ];
+
+const STAGE_OPTIONS: { value: LeadStageFilter; label: string }[] = [
+  { value: "NEW_LEAD", label: "New Visit / Lead" },
+  { value: "CONTACTED", label: "Contacted" },
+  { value: "QUALIFIED", label: "Qualified" },
+  { value: "QUOTATION", label: "Quotation" },
+  { value: "MEETING", label: "Meeting" },
+  { value: "PURCHASE_ORDER", label: "PO (Purchase Order)" },
+  { value: "LOST", label: "Lost" },
+];
+
+const STAGE_FILTER_VALUES = new Set(STAGE_OPTIONS.map((o) => o.value));
+
+function isLeadStageFilter(value: string | null): value is LeadStageFilter {
+  return !!value && STAGE_FILTER_VALUES.has(value as LeadStageFilter);
+}
 
 function useColumns(nameFor: (id: string) => string): ColumnDef<Lead>[] {
   return [
@@ -55,12 +89,10 @@ function useColumns(nameFor: (id: string) => string): ColumnDef<Lead>[] {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => (
-        <StatusBadge
-          label={row.original.status}
-          tone={leadStatusTone(row.original.status)}
-        />
-      ),
+      cell: ({ row }) => {
+        const stage = deriveLeadStage(row.original);
+        return <StatusBadge label={stage.label} tone={stage.tone} />;
+      },
     },
     {
       accessorKey: "createdBy",
@@ -73,7 +105,16 @@ function useColumns(nameFor: (id: string) => string): ColumnDef<Lead>[] {
 const DEFAULT_FILTERS: ListLeadsFilters = { page: 1, pageSize: 25 };
 
 export default function LeadsPage() {
-  const [filters, setFilters] = useState<ListLeadsFilters>(DEFAULT_FILTERS);
+  const searchParams = useSearchParams();
+  const [filters, setFilters] = useState<ListLeadsFilters>(() => {
+    const stageParam = searchParams.get("stage");
+    const ownerIdParam = searchParams.get("ownerId");
+    return {
+      ...DEFAULT_FILTERS,
+      ...(isLeadStageFilter(stageParam) ? { stage: stageParam } : {}),
+      ...(ownerIdParam ? { ownerId: ownerIdParam } : {}),
+    };
+  });
   const { data, isLoading } = useLeads(filters);
   const router = useRouter();
   const { user } = useAuth();
@@ -114,18 +155,18 @@ export default function LeadsPage() {
           className="w-full max-w-sm rounded-xl border border-border bg-card px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all"
         />
         <select
-          value={filters.status ?? ""}
+          value={filters.stage ?? ""}
           onChange={(event) =>
             setFilters((prev) => ({
               ...prev,
-              status: (event.target.value || undefined) as LeadStatus | undefined,
+              stage: (event.target.value || undefined) as LeadStageFilter | undefined,
               page: 1,
             }))
           }
           className="rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all"
         >
           <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((option) => (
+          {STAGE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>

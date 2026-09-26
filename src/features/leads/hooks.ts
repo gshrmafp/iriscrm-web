@@ -29,6 +29,21 @@ export function useLeadStatusSummary(ownerId?: string) {
   });
 }
 
+export function useLeadJourneySummary(filters: api.JourneySummaryFilters = {}) {
+  return useQuery({
+    queryKey: ["leads", "journey-summary", filters],
+    queryFn: () => api.getLeadJourneySummary(filters),
+  });
+}
+
+export function useTeamPerformance(filters: api.TeamPerformanceFilters = {}, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: ["leads", "team-performance", filters],
+    queryFn: () => api.getTeamPerformance(filters),
+    enabled: options.enabled ?? true,
+  });
+}
+
 export function useLogFollowUp(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

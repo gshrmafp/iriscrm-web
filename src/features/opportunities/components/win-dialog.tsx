@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +25,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useWinOpportunity } from "@/features/opportunities/hooks";
-import { useAllCatalogItems } from "@/features/catalog/hooks";
 import { useReverseGeocode } from "@/features/geo/hooks";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { DealType } from "@/types/entities";
@@ -41,8 +38,6 @@ const formSchema = z.object({
   poRemarks: z.string().optional(),
   site: z.string(),
   timeline: z.string(),
-  customerId: z.string(),
-  bom: z.array(z.object({ catalogItemId: z.string(), qty: z.number() })),
   amcType: z.enum(["COMPREHENSIVE", "NON_COMPREHENSIVE"]),
   amcFrequency: z.enum(["MONTHLY", "QUARTERLY", "ANNUAL"]),
   amcStartDate: z.string(),
@@ -65,7 +60,6 @@ export function WinDialog({
 }) {
   const [open, setOpen] = useState(false);
   const winOpportunity = useWinOpportunity(opportunityId);
-  const { data: catalogItems } = useAllCatalogItems();
   const reverseGeocode = useReverseGeocode();
 
   // Captured silently in the background while the dialog is open — no
@@ -75,7 +69,6 @@ export function WinDialog({
 
   const {
     register,
-    control,
     handleSubmit,
     watch,
     setValue,
@@ -89,8 +82,6 @@ export function WinDialog({
       poRemarks: "",
       site: "",
       timeline: "",
-      customerId: "",
-      bom: [],
       amcType: "COMPREHENSIVE",
       amcFrequency: "MONTHLY",
       amcStartDate: "",
@@ -98,7 +89,6 @@ export function WinDialog({
     },
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: "bom" });
   const isAmc = dealType === "AMC";
 
   useEffect(() => {
@@ -131,21 +121,6 @@ export function WinDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const catalogItemOptions: ComboboxOption[] = useMemo(
-    () =>
-      (catalogItems ?? []).map((item) => ({
-        value: item.id,
-        label: item.name,
-        description: `${item.code} · ₹${Number(item.basePrice).toLocaleString("en-IN")}`,
-      })),
-    [catalogItems],
-  );
-
-  function onBomQtyChange(index: number, event: ChangeEvent<HTMLInputElement>) {
-    const rounded = Math.max(1, Math.round(Number(event.target.value) || 0));
-    setValue(`bom.${index}.qty`, rounded, { shouldValidate: true });
-  }
-
   async function onSubmit(values: FormValues) {
     try {
       await winOpportunity.mutateAsync({
@@ -158,8 +133,6 @@ export function WinDialog({
         poLocation: poGps.location,
         site: values.site || undefined,
         timeline: values.timeline || undefined,
-        customerId: values.customerId || undefined,
-        bom: values.bom.length ? values.bom : undefined,
         amcType: isAmc ? values.amcType : undefined,
         amcFrequency: isAmc ? values.amcFrequency : undefined,
         amcStartDate: isAmc && values.amcStartDate
@@ -223,65 +196,12 @@ export function WinDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="customerId">Customer ID</Label>
-            <Input id="customerId" {...register("customerId")} />
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="site">Site</Label>
             <Input id="site" placeholder="Acme HQ, Sector 21" {...register("site")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="timeline">Timeline</Label>
             <Input id="timeline" placeholder="2 weeks" {...register("timeline")} />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Bill of materials</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => append({ catalogItemId: "", qty: 1 })}
-              >
-                <Plus className="size-3.5" /> Add item
-              </Button>
-            </div>
-            {fields.map((field, index) => (
-              <div key={field.id} className="flex items-end gap-2">
-                <div className="flex-1 space-y-1">
-                  <Label className="text-xs">Catalog item</Label>
-                  <Combobox
-                    items={catalogItemOptions}
-                    value={watch(`bom.${index}.catalogItemId`) || null}
-                    onValueChange={(value) =>
-                      setValue(`bom.${index}.catalogItemId`, value ?? "")
-                    }
-                    placeholder="Search catalog item…"
-                    emptyMessage="No catalog items found."
-                  />
-                </div>
-                <div className="w-24 space-y-1">
-                  <Label className="text-xs">Qty</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="1"
-                    inputMode="numeric"
-                    {...register(`bom.${index}.qty`, { valueAsNumber: true })}
-                    onChange={(event) => onBomQtyChange(index, event)}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => remove(index)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-            ))}
           </div>
 
           {isAmc ? (

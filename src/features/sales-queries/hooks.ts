@@ -150,10 +150,10 @@ export function useStatusTransitionsMeta() {
 }
 
 // ---------- Dashboard ----------
-export function useDashboardStats() {
+export function useDashboardStats(filters: api.DashboardStatsFilters = {}) {
   return useQuery({
-    queryKey: salesQueriesKeys.dashboard,
-    queryFn: api.getDashboardStats,
+    queryKey: [...salesQueriesKeys.dashboard, filters],
+    queryFn: () => api.getDashboardStats(filters),
   });
 }
 

@@ -46,11 +46,17 @@ export async function listOpportunities(
   return data;
 }
 
+export interface PipelineSummaryFilters {
+  ownerId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 export async function getOpportunityPipelineSummary(
-  ownerId?: string,
+  filters: PipelineSummaryFilters = {},
 ): Promise<OpportunityPipelineSummary> {
   const { data } = await apiClient.get<OpportunityPipelineSummary>("/opportunities/summary/stats", {
-    params: ownerId ? { ownerId } : undefined,
+    params: filters,
   });
   return data;
 }

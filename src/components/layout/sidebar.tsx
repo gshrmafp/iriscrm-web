@@ -17,7 +17,6 @@ import {
   Clock,
   CheckSquare,
   Box,
-  MessageCircleQuestion,
   BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,9 +35,7 @@ const SALES_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/opportunities", label: "Opportunities", icon: Target },
-  { href: "/sales-queries", label: "Sales Queries", icon: MessageCircleQuestion },
   { href: "/sales-queries/dashboard", label: "Query Dashboard", icon: BarChart3 },
-  { href: "/sales-queries/reports", label: "Query Reports", icon: FileText },
   { href: "/catalog/items", label: "Catalog", icon: Package },
 ];
 

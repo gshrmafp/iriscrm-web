@@ -14,6 +14,7 @@ import {
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { PipelineBoard } from "@/features/opportunities/components/pipeline-board";
 import { useOpportunities, useOpportunityPipelineSummary } from "@/features/opportunities/hooks";
+import { useLeads } from "@/features/leads/hooks";
 import { useUserDirectory } from "@/features/identity/hooks";
 import { useAuth } from "@/features/auth/AuthProvider";
 import type { ListOpportunitiesFilters } from "@/features/opportunities/api";
@@ -61,7 +62,31 @@ export default function OpportunitiesPage() {
   const [filters, setFilters] = useState<ListOpportunitiesFilters>(DEFAULT_FILTERS);
   const { data, isLoading } = useOpportunities(filters);
   const { data: boardData } = useOpportunities({ ownerId: filters.ownerId, pageSize: BOARD_PAGE_SIZE });
-  const { data: summary } = useOpportunityPipelineSummary(filters.ownerId);
+  const { data: summary } = useOpportunityPipelineSummary({ ownerId: filters.ownerId });
+  const { data: newLeadsBoard } = useLeads({
+    stage: "NEW_LEAD",
+    ownerId: filters.ownerId,
+    pageSize: BOARD_PAGE_SIZE,
+  });
+  const { data: contactedLeadsBoard } = useLeads({
+    stage: "CONTACTED",
+    ownerId: filters.ownerId,
+    pageSize: BOARD_PAGE_SIZE,
+  });
+  const { data: qualifiedLeadsBoard } = useLeads({
+    stage: "QUALIFIED",
+    ownerId: filters.ownerId,
+    pageSize: BOARD_PAGE_SIZE,
+  });
+  const leadColumns = {
+    NEW_LEAD: newLeadsBoard ? { items: newLeadsBoard.items, total: newLeadsBoard.total } : undefined,
+    CONTACTED: contactedLeadsBoard
+      ? { items: contactedLeadsBoard.items, total: contactedLeadsBoard.total }
+      : undefined,
+    QUALIFIED: qualifiedLeadsBoard
+      ? { items: qualifiedLeadsBoard.items, total: qualifiedLeadsBoard.total }
+      : undefined,
+  };
   const router = useRouter();
   const { user } = useAuth();
   const { data: users = [] } = useUserDirectory();
@@ -96,7 +121,11 @@ export default function OpportunitiesPage() {
           <TabsTrigger value="list">List</TabsTrigger>
         </TabsList>
         <TabsContent value="board">
-          <PipelineBoard opportunities={boardData?.items ?? []} summary={summary} />
+          <PipelineBoard
+            opportunities={boardData?.items ?? []}
+            summary={summary}
+            leadColumns={leadColumns}
+          />
         </TabsContent>
         <TabsContent value="list">
           <DataTable

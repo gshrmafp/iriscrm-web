@@ -272,21 +272,39 @@ export default function NewLeadPage() {
       }
     }
 
-    navigator.geolocation.getCurrentPosition(
-      onSuccess,
-      (error) => {
-        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
-          navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
-            enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: 60000,
-          });
-          return;
-        }
-        onFinalError(error);
+    // watchPosition keeps the location subsystem open and takes whatever
+    // fix arrives first, rather than a single getCurrentPosition call's hard
+    // deadline — this succeeds much more often on providers that are slow to
+    // warm up (the kCLErrorLocationUnknown failures seen in testing were the
+    // provider timing out before it had a fix ready, not a real denial).
+    // PERMISSION_DENIED still fails fast; any other error is transient and
+    // the watch is left running so a later update can still succeed. An
+    // outer deadline below is the actual "give up" point.
+    let settled = false;
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        if (settled) return;
+        settled = true;
+        navigator.geolocation.clearWatch(watchId);
+        onSuccess(position);
       },
-      { enableHighAccuracy: true, timeout: 8000 },
+      (error) => {
+        if (settled) return;
+        if (error.code === error.PERMISSION_DENIED) {
+          settled = true;
+          navigator.geolocation.clearWatch(watchId);
+          onFinalError(error);
+        }
+        // else: transient — keep watching, the outer deadline below covers a full failure.
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
     );
+    setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      navigator.geolocation.clearWatch(watchId);
+      onFinalError({ code: 2, message: "Timed out waiting for location", PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError);
+    }, 20000);
   }
 
   useEffect(() => {
@@ -394,11 +412,7 @@ export default function NewLeadPage() {
         quotationAmount: Number(quotationAmount),
       });
       toast.success("Lead qualified — opportunity created");
-      if (result.opportunity) {
-        router.push(`/opportunities/${result.opportunity.id}`);
-      } else {
-        router.push(`/leads/${leadId}`);
-      }
+      router.push(`/leads/${leadId}`);
     } catch (err) {
       toast.error(getApiErrorMessage(err));
     }

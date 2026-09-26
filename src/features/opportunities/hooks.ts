@@ -15,10 +15,10 @@ export function useOpportunities(filters: api.ListOpportunitiesFilters = {}) {
   });
 }
 
-export function useOpportunityPipelineSummary(ownerId?: string) {
+export function useOpportunityPipelineSummary(filters: api.PipelineSummaryFilters = {}) {
   return useQuery({
-    queryKey: [...opportunitiesKeys.summary, ownerId ?? null],
-    queryFn: () => api.getOpportunityPipelineSummary(ownerId),
+    queryKey: [...opportunitiesKeys.summary, filters],
+    queryFn: () => api.getOpportunityPipelineSummary(filters),
   });
 }
 
@@ -35,6 +35,10 @@ function useInvalidateOpportunity(id: string) {
   return () => {
     queryClient.invalidateQueries({ queryKey: opportunitiesKeys.detail(id) });
     queryClient.invalidateQueries({ queryKey: opportunitiesKeys.all });
+    // An opportunity is always shown embedded in its Lead's detail page too
+    // (Lead Journey accordion) — invalidate that cache as well so stage/PO
+    // changes made from there (e.g. WinDialog) show up without a manual refresh.
+    queryClient.invalidateQueries({ queryKey: ["leads"] });
   };
 }
 

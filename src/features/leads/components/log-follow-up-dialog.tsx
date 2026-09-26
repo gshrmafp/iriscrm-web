@@ -29,10 +29,27 @@ import { getApiErrorMessage } from "@/lib/api-client";
 
 const CHANNELS = ["call", "meeting", "email"] as const;
 
+// Local "YYYY-MM-DDTHH:mm" for the `min` on the datetime-local input below —
+// a follow-up reminder only ever makes sense now or later.
+function nowDateTimeInputValue(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${day}T${h}:${min}`;
+}
+
 const schema = z.object({
   note: z.string().min(1, "Note is required"),
   channel: z.enum(CHANNELS),
-  nextActionAt: z.string().optional(),
+  nextActionAt: z
+    .string()
+    .optional()
+    .refine((value) => !value || new Date(value).getTime() >= Date.now() - 60_000, {
+      message: "Next action reminder must be in the future",
+    }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -109,7 +126,15 @@ export function LogFollowUpDialog({ leadId }: { leadId: string }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="nextActionAt">Next action reminder</Label>
-            <Input id="nextActionAt" type="datetime-local" {...register("nextActionAt")} />
+            <Input
+              id="nextActionAt"
+              type="datetime-local"
+              min={nowDateTimeInputValue()}
+              {...register("nextActionAt")}
+            />
+            {errors.nextActionAt ? (
+              <p className="text-sm text-destructive">{errors.nextActionAt.message}</p>
+            ) : null}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={logFollowUp.isPending}>

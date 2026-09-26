@@ -19,6 +19,7 @@ import { FollowUpTimeline } from "@/features/leads/components/follow-up-timeline
 import { LogFollowUpDialog } from "@/features/leads/components/log-follow-up-dialog";
 import { MeetingTimeline } from "@/features/leads/components/meeting-timeline";
 import { LogMeetingDialog } from "@/features/leads/components/log-meeting-dialog";
+import { WinDialog } from "@/features/opportunities/components/win-dialog";
 import { CommentSection } from "@/features/comments/components/comment-section";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types/entities";
@@ -42,6 +43,12 @@ function isLeadTerminal(lead: Lead): boolean {
     lead.opportunity?.stage === "PURCHASE_ORDER" ||
     lead.opportunity?.stage === "LOST"
   );
+}
+
+// The Win flow (capturing PO details) is only reachable from these 3 open
+// stages — matches the backend's win() gate exactly.
+function canWinOpportunity(stage: OpportunityStage): boolean {
+  return stage === "QUOTATION" || stage === "FOLLOWUP" || stage === "MEETING";
 }
 
 const QUAL_PATH_LABELS: Record<string, { label: string; tone: string }> = {
@@ -348,6 +355,18 @@ function LeadJourney({ lead }: { lead: Lead }) {
                       <div className="flex flex-wrap gap-2 pt-1">
                         <LogFollowUpDialog leadId={lead.id} />
                         <LogMeetingDialog leadId={lead.id} />
+                      </div>
+                    )}
+
+                    {/* Purchase Order entry lives directly here — no need to
+                        navigate to the separate Opportunities section. */}
+                    {step.key === "PURCHASE_ORDER" && opp && canWinOpportunity(opp.stage) && (
+                      <div className="pt-1">
+                        <WinDialog
+                          opportunityId={opp.id}
+                          dealType={opp.dealType}
+                          triggerContent="Win — Capture Purchase Order"
+                        />
                       </div>
                     )}
                   </div>

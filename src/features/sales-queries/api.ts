@@ -188,8 +188,17 @@ export async function getSalesQuery(id: string): Promise<SalesQuery> {
   return data;
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
-  const { data } = await apiClient.get<DashboardStats>("/sales-queries/dashboard/stats");
+export interface DashboardStatsFilters {
+  fromDate?: string;
+  toDate?: string;
+}
+
+export async function getDashboardStats(
+  filters: DashboardStatsFilters = {},
+): Promise<DashboardStats> {
+  const { data } = await apiClient.get<DashboardStats>("/sales-queries/dashboard/stats", {
+    params: filters,
+  });
   return data;
 }
 

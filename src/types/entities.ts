@@ -69,6 +69,18 @@ export interface PicklistOption {
 
 export type LeadStatus = "NEW" | "QUALIFIED" | "LOST";
 
+// Composite "Lead Journey" stage filter — folds Lead.status/currentStep and
+// Opportunity.stage into the same 7 stages shown on a lead's own journey
+// timeline (see leads/[id]/page.tsx's Lead Journey accordion).
+export type LeadStageFilter =
+  | "NEW_LEAD"
+  | "CONTACTED"
+  | "QUALIFIED"
+  | "QUOTATION"
+  | "MEETING"
+  | "PURCHASE_ORDER"
+  | "LOST";
+
 // Snapshot of which of the 7 named lifecycle stages was active at the exact
 // moment a follow-up/meeting was logged. Set automatically by the backend
 // on every POST /leads/:id/follow-ups and POST /leads/:id/meetings call —
