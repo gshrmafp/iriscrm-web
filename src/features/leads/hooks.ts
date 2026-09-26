@@ -29,47 +29,28 @@ export function useLeadStatusSummary(ownerId?: string) {
   });
 }
 
-export function useCreateLead() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: api.createLead,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: leadsKeys.all });
-    },
-  });
-}
-
 export function useLogFollowUp(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: api.LogFollowUpPayload) =>
       api.logFollowUp(id, payload),
     onSuccess: () => {
+      // A follow-up can silently auto-advance the linked opportunity's stage
+      // (QUOTATION -> FOLLOWUP) on the backend, so refetch both.
       queryClient.invalidateQueries({ queryKey: leadsKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ["opportunities"] });
     },
   });
 }
 
-export function useMarkLeadLost(id: string) {
+export function useLogMeeting(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: api.MarkLeadLostPayload) =>
-      api.markLeadLost(id, payload),
+    mutationFn: (payload: api.LogMeetingPayload) => api.logMeeting(id, payload),
     onSuccess: () => {
+      // A meeting can silently auto-advance the linked opportunity's stage
+      // (QUOTATION/FOLLOWUP -> MEETING) on the backend, so refetch both.
       queryClient.invalidateQueries({ queryKey: leadsKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: leadsKeys.all });
-    },
-  });
-}
-
-export function useQualifyLead(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: api.QualifyLeadPayload) =>
-      api.qualifyLead(id, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: leadsKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: leadsKeys.all });
       queryClient.invalidateQueries({ queryKey: ["opportunities"] });
     },
   });

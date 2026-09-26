@@ -32,9 +32,10 @@ export function leadStatusTone(status: string) {
 }
 
 export function opportunityStageTone(stage: string) {
-  if (stage === "WON") return "success" as const;
+  if (stage === "PURCHASE_ORDER") return "success" as const;
   if (stage === "LOST") return "danger" as const;
-  if (stage === "NEGOTIATION" || stage === "QUOTED") return "warning" as const;
+  if (stage === "FOLLOWUP" || stage === "QUOTATION") return "warning" as const;
+  if (stage === "MEETING") return "purple" as const;
   return "info" as const;
 }
 

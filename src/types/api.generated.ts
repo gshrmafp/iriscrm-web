@@ -286,7 +286,7 @@ export interface paths {
                     pageSize?: number;
                     sortBy?: "createdAt" | "updatedAt" | "value" | "expectedClose";
                     sortOrder?: "asc" | "desc";
-                    stage?: "NEW" | "CONTACTED" | "QUALIFIED" | "QUOTED" | "NEGOTIATION" | "MEETING" | "WON" | "LOST";
+                    stage?: "QUOTATION" | "FOLLOWUP" | "MEETING" | "PURCHASE_ORDER" | "LOST";
                     dealType?: "INSTALLATION" | "AMC" | "PRODUCT";
                     ownerId?: string;
                     dateFrom?: string;
@@ -414,10 +414,10 @@ export interface paths {
                 content: {
                     "application/json": {
                         /**
-                         * @example CONTACTED
+                         * @example FOLLOWUP
                          * @enum {string}
                          */
-                        toStage: "NEW" | "CONTACTED" | "QUALIFIED" | "QUOTED" | "NEGOTIATION" | "MEETING" | "WON" | "LOST";
+                        toStage: "QUOTATION" | "FOLLOWUP" | "MEETING" | "PURCHASE_ORDER" | "LOST";
                         remark?: string;
                     };
                 };
@@ -528,7 +528,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Close Won — creates the AmcContract or Project hand-off record (SM-4.1, SM-5.4) */
+        /** Close as Purchase Order (Won) — captures the PO and creates the AmcContract or Project hand-off record (SM-4.1, SM-5.4) */
         post: {
             parameters: {
                 query?: never;
@@ -538,9 +538,22 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
+                        /** @example PO-2026-0042 */
+                        poNumber: string;
+                        /** Format: date-time */
+                        poDate: string;
+                        /** @example 150000 */
+                        poAmount: number;
+                        poRemarks?: string;
+                        /** @example 28.4595 */
+                        poGpsLatitude?: number;
+                        /** @example 77.0266 */
+                        poGpsLongitude?: number;
+                        /** @description Reverse-geocoded location label */
+                        poLocation?: string;
                         /** @example Acme HQ, Sector 21 */
                         site?: string;
                         /** @example 2 weeks */
@@ -721,8 +734,8 @@ export interface paths {
                     sortBy?: "createdAt" | "updatedAt" | "contactName";
                     sortOrder?: "asc" | "desc";
                     status?: "NEW" | "QUALIFIED" | "LOST";
-                    source?: string;
-                    productInterest?: string;
+                    /** @description Filters by the linked Opportunity's stage instead of the lead's own status. */
+                    opportunityStage?: "QUOTATION" | "FOLLOWUP" | "MEETING" | "PURCHASE_ORDER" | "LOST";
                     ownerId?: string;
                     /** @description Matches contactName / companyName / contactPhone / contactEmail */
                     search?: string;
@@ -745,7 +758,23 @@ export interface paths {
             };
         };
         put?: never;
-        /** Capture a lead (SM-1.1..SM-1.6) */
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/stepped": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a lead via stepped wizard — Step 1 (site visit) */
         post: {
             parameters: {
                 query?: never;
@@ -757,43 +786,15 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @example Acme Corp */
-                        contactName: string;
-                        companyName?: string;
-                        /**
-                         * @description 10-digit Indian mobile number, optional +91/0 prefix
-                         * @example 9999999999
-                         */
-                        contactPhone?: string;
-                        /** @example buyer@acme.com */
-                        contactEmail?: string;
-                        /** @description Contact/company address, max 500 characters */
-                        address?: string;
+                        companyName: string;
+                        /** @description Observation/remarks, required, max 400 chars */
+                        remarks: string;
                         /** @example 28.4595 */
-                        gpsLatitude?: number;
+                        gpsLatitude: number;
                         /** @example 77.0266 */
-                        gpsLongitude?: number;
-                        /** @description Reverse-geocoded label for gpsLatitude/gpsLongitude */
-                        visitLocation?: string;
-                        /**
-                         * @description Code of an active Lead Source picklist option (GET /picklists?listType=LEAD_SOURCE) — admin-managed, not a fixed enum.
-                         * @example WEB_FORM
-                         */
-                        source: string;
-                        /** @description Required when source is OTHER */
-                        sourceOther?: string;
-                        /**
-                         * @description Code of an active Product Interest picklist option (GET /picklists?listType=PRODUCT_INTEREST), optional.
-                         * @example CCTV_INSTALLATION
-                         */
-                        productInterest?: string;
-                        /** @description Required when productInterest is OTHER */
-                        productInterestOther?: string;
-                        /** @description Max 400 characters */
-                        notes?: string;
-                        /** @description Admin override only */
-                        regionId?: string;
-                        /** @description Defaults to the creator */
-                        ownerId?: string;
+                        gpsLongitude: number;
+                        /** @description Reverse-geocoded location label, required */
+                        visitLocation: string;
                     };
                 };
             };
@@ -811,6 +812,134 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/step-2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Stepped wizard — Step 2 (contact details) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @example John Doe */
+                        contactName: string;
+                        /**
+                         * @description Required, 10-digit Indian mobile number
+                         * @example 9999999999
+                         */
+                        contactPhone: string;
+                        /**
+                         * @description Optional
+                         * @example john@acme.com
+                         */
+                        contactEmail?: string;
+                        /** @description Required, max 400 chars */
+                        discussionNote: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/leads/{id}/step-3": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Stepped wizard — Step 3 (qualification) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        path: "NOT_QUALIFIED" | "FUTURE_POTENTIAL" | "REQUIREMENT_IDENTIFIED";
+                        /** @description Required for NOT_QUALIFIED */
+                        remark?: string;
+                        /**
+                         * Format: date-time
+                         * @description Required for FUTURE_POTENTIAL
+                         */
+                        followUpDate?: string;
+                        /** @description Optional for FUTURE_POTENTIAL */
+                        remarks?: string;
+                        /**
+                         * @description Required for REQUIREMENT_IDENTIFIED
+                         * @enum {string}
+                         */
+                        dealType?: "INSTALLATION" | "AMC" | "MAINTENANCE";
+                        /** @description Required for REQUIREMENT_IDENTIFIED */
+                        quotationRef?: string;
+                        /**
+                         * Format: date-time
+                         * @description Required for REQUIREMENT_IDENTIFIED
+                         */
+                        quotationDate?: string;
+                        /** @description Required for REQUIREMENT_IDENTIFIED */
+                        quotationAmount?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Created (when opportunity is created) */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         trace?: never;
     };
     "/leads/status-summary": {
@@ -833,6 +962,116 @@ export interface paths {
             requestBody?: never;
             responses: {
                 /** @description Array of { status, count } */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/follow-ups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Flat, cross-lead follow-up feed for the caller's visible leads (powers an Activities-style view), sorted by next-action-due first */
+        get: {
+            parameters: {
+                query?: {
+                    ownerId?: string;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated result: { data: { items, total, page, pageSize, totalPages } }, each item embeds a minimal lead */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/follow-ups/{followUpId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a follow-up complete */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    followUpId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/dashboard-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active/needs-attention lead counts for the caller (real, derived — not stored fields), powers the mobile Home dashboard */
+        get: {
+            parameters: {
+                query?: {
+                    ownerId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description { activeCount, needAttentionCount } */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -935,7 +1174,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/leads/{id}/lost": {
+    "/leads/{id}/meetings": {
         parameters: {
             query?: never;
             header?: never;
@@ -944,7 +1183,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark a lead Lost with a mandatory reason (SM-1.11) */
+        /** Log a physical meeting — discussion note + silently-captured GPS location. Loggable at any point in the lead's life, same as follow-ups. Advances the linked opportunity's stage to MEETING (never-regress). */
         post: {
             parameters: {
                 query?: never;
@@ -957,61 +1196,14 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        /**
-                         * @example price
-                         * @enum {string}
-                         */
-                        reason: "price" | "competitor" | "no_budget" | "no_response" | "other";
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/leads/{id}/qualify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Convert a lead into an Opportunity (SM-1.7) */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /**
-                         * @example INSTALLATION
-                         * @enum {string}
-                         */
-                        dealType: "INSTALLATION" | "AMC" | "PRODUCT";
-                        /** @example 40000 */
-                        value: number;
-                        /** Format: date-time */
-                        expectedClose?: string;
+                        /** @description What was discussed, required, max 400 chars */
+                        note: string;
+                        /** @example 28.4595 */
+                        gpsLatitude?: number;
+                        /** @example 77.0266 */
+                        gpsLongitude?: number;
+                        /** @description Reverse-geocoded location label */
+                        visitLocation?: string;
                     };
                 };
             };
@@ -1811,6 +2003,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the current user's own profile */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the current user's own profile (name, email) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        email?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change the current user's password */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        currentPassword: string;
+                        newPassword: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/refresh": {
         parameters: {
             query?: never;
@@ -2435,6 +2727,154 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List customers visible to the caller (region-scoped unless cross-region), paginated */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                    search?: string;
+                    active?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated result: { data: { items, total, page, pageSize, totalPages } } */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Create a customer */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** @example Business */
+                        type: string;
+                        contacts?: {
+                            name?: string;
+                            phone?: string;
+                            email?: string;
+                        }[];
+                        addresses?: {
+                            line1?: string;
+                            city?: string;
+                            state?: string;
+                            pincode?: string;
+                        }[];
+                        /** @description Admin override only */
+                        regionId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Total + new-this-month customer counts (real, createdAt-derived — no fabricated trend), powers the mobile Home dashboard */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description { total, newThisMonth } */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one customer */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

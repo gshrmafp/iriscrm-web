@@ -12,7 +12,6 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLeads, useLeadStatusSummary } from "@/features/leads/hooks";
-import { usePicklistLabelResolver } from "@/features/picklists/hooks";
 import { useUserDirectory } from "@/features/identity/hooks";
 import { useAuth } from "@/features/auth/AuthProvider";
 import type { ListLeadsFilters } from "@/features/leads/api";
@@ -31,7 +30,6 @@ const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
 ];
 
 function useColumns(nameFor: (id: string) => string): ColumnDef<Lead>[] {
-  const resolveLabel = usePicklistLabelResolver();
   return [
     { accessorKey: "refNo", header: "Ref #" },
     {
@@ -50,20 +48,9 @@ function useColumns(nameFor: (id: string) => string): ColumnDef<Lead>[] {
     },
     { accessorKey: "companyName", header: "Company" },
     {
-      accessorKey: "productInterest",
-      header: "Product interest",
-      cell: ({ row }) =>
-        row.original.productInterest === "OTHER" && row.original.productInterestOther
-          ? row.original.productInterestOther
-          : resolveLabel("PRODUCT_INTEREST", row.original.productInterest),
-    },
-    {
-      accessorKey: "source",
-      header: "Source",
-      cell: ({ row }) =>
-        row.original.source === "OTHER" && row.original.sourceOther
-          ? row.original.sourceOther
-          : resolveLabel("LEAD_SOURCE", row.original.source),
+      accessorKey: "visitLocation",
+      header: "Visit location",
+      cell: ({ row }) => row.original.visitLocation || "—",
     },
     {
       accessorKey: "status",

@@ -26,13 +26,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LogFollowUpDialog } from "@/features/leads/components/log-follow-up-dialog";
+import { LogMeetingDialog } from "@/features/leads/components/log-meeting-dialog";
+import { FollowUpTimeline } from "@/features/leads/components/follow-up-timeline";
+import { MeetingTimeline } from "@/features/leads/components/meeting-timeline";
 import {
   useCreateLeadStep1,
   useSaveLeadStep2,
   useSaveLeadStep3,
   useLead,
 } from "@/features/leads/hooks";
-import { useReverseGeocode } from "@/features/geo/hooks";
+import { useReverseGeocode, useForwardGeocode } from "@/features/geo/hooks";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { Lead, Opportunity } from "@/types/entities";
@@ -45,33 +49,39 @@ const STEPS = [
 
 const LOCAL_MOBILE_REGEX = /^[6-9]\d{9}$/;
 
+// Today's date as a "YYYY-MM-DD" string in the user's local timezone (NOT
+// toISOString(), which would shift to UTC and can land on the wrong day) —
+// used as the `min` on every date input in this wizard, since a follow-up
+// or quotation date only ever makes sense today or later.
+function todayDateInputValue(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 // --- Step 1 schema ---
 const step1Schema = z.object({
   companyName: z.string().min(1, "Company name is required"),
-  remarks: z.string().max(1000).optional(),
-  gpsLatitude: z.number().optional(),
-  gpsLongitude: z.number().optional(),
-  visitLocation: z.string().optional(),
+  remarks: z.string().min(1, "Remarks are required").max(400, "Max 400 characters"),
+  gpsLatitude: z.number({ error: "Location is required" }),
+  gpsLongitude: z.number({ error: "Location is required" }),
+  visitLocation: z.string().min(1, "Location is required"),
 });
 type Step1Values = z.infer<typeof step1Schema>;
 
 // --- Step 2 schema ---
-const step2Schema = z
-  .object({
-    contactName: z.string().min(1, "Customer name is required"),
-    contactPhone: z
-      .string()
-      .refine((v) => v.length === 0 || v.length === 10, "Must be exactly 10 digits")
-      .refine((v) => v.length === 0 || LOCAL_MOBILE_REGEX.test(v), "Must start with 6-9")
-      .optional()
-      .or(z.literal("")),
-    contactEmail: z.string().email("Enter a valid email").optional().or(z.literal("")),
-    discussionNote: z.string().max(1000).optional(),
-  })
-  .refine((data) => !!data.contactPhone?.trim() || !!data.contactEmail?.trim(), {
-    message: "At least one of phone or email is required",
-    path: ["contactPhone"],
-  });
+const step2Schema = z.object({
+  contactName: z.string().min(1, "Customer name is required"),
+  contactPhone: z
+    .string()
+    .min(1, "Contact number is required")
+    .length(10, "Must be exactly 10 digits")
+    .refine((v) => LOCAL_MOBILE_REGEX.test(v), "Must start with 6-9"),
+  contactEmail: z.string().email("Enter a valid email").optional().or(z.literal("")),
+  discussionNote: z.string().min(1, "Discussion note is required").max(400, "Max 400 characters"),
+});
 type Step2Values = z.infer<typeof step2Schema>;
 
 // --- Step 3 types ---
@@ -139,18 +149,29 @@ export default function NewLeadPage() {
 
   // Resume: fetch lead data and jump to the right step
   const { data: resumeLead } = useLead(resumeId ?? "");
+
+  // Live lead record (once created) — refetches automatically whenever a
+  // follow-up/meeting is logged from this wizard (useLogFollowUp/useLogMeeting
+  // invalidate this same query key), so newly-logged entries show up here
+  // instantly instead of only surfacing a toast.
+  const { data: liveLead } = useLead(leadId ?? "");
+  const followUpsAt = (stage: string) => (liveLead?.followUps ?? []).filter((f) => f.loggedAtStage === stage);
+  const meetingsAt = (stage: string) => (liveLead?.meetings ?? []).filter((m) => m.loggedAtStage === stage);
   useEffect(() => {
     if (!resumeLead) return;
     setLeadId(resumeLead.id);
     setLeadRefNo(resumeLead.refNo);
     const step = resumeLead.currentStep ?? 1;
     if (step >= 1) {
+      // Step 1 is now required end-to-end on the backend, so a lead that has
+      // already completed it will have all of these populated — the
+      // fallbacks below only guard against stale/partial drafts.
       setSavedStep1({
         companyName: resumeLead.companyName ?? "",
-        remarks: resumeLead.remarks ?? undefined,
-        visitLocation: resumeLead.visitLocation ?? undefined,
-        gpsLatitude: resumeLead.gpsLatitude ? Number(resumeLead.gpsLatitude) : undefined,
-        gpsLongitude: resumeLead.gpsLongitude ? Number(resumeLead.gpsLongitude) : undefined,
+        remarks: resumeLead.remarks ?? "",
+        visitLocation: resumeLead.visitLocation ?? "",
+        gpsLatitude: resumeLead.gpsLatitude ? Number(resumeLead.gpsLatitude) : 0,
+        gpsLongitude: resumeLead.gpsLongitude ? Number(resumeLead.gpsLongitude) : 0,
       });
     }
     if (step >= 2) {
@@ -158,7 +179,7 @@ export default function NewLeadPage() {
         contactName: resumeLead.contactName ?? "",
         contactPhone: resumeLead.contactPhone ?? "",
         contactEmail: resumeLead.contactEmail ?? "",
-        discussionNote: resumeLead.discussionNote ?? undefined,
+        discussionNote: resumeLead.discussionNote ?? "",
       });
     }
     setCurrentStep(step + 1 > 3 ? 3 : step + 1);
@@ -175,6 +196,23 @@ export default function NewLeadPage() {
   const saveStep2 = useSaveLeadStep2(leadId ?? "");
   const saveStep3 = useSaveLeadStep3(leadId ?? "");
   const reverseGeocode = useReverseGeocode();
+  const forwardGeocode = useForwardGeocode();
+
+  // GPS is unavailable (denied, no hardware, indoors) but the user typed an
+  // address by hand — forward-geocode it in the background to still fill in
+  // gpsLatitude/gpsLongitude, since both are required alongside visitLocation.
+  function handleManualLocationBlur() {
+    const typed = step1Form.getValues("visitLocation")?.trim();
+    const hasGps = step1Form.getValues("gpsLatitude") != null && step1Form.getValues("gpsLongitude") != null;
+    if (!typed || hasGps || forwardGeocode.isPending) return;
+    forwardGeocode.mutate(typed, {
+      onSuccess: (result) => {
+        if (!result) return;
+        step1Form.setValue("gpsLatitude", result.lat, { shouldValidate: true });
+        step1Form.setValue("gpsLongitude", result.lng, { shouldValidate: true });
+      },
+    });
+  }
 
   // Step 1 form
   const step1Form = useForm<Step1Values>({
@@ -386,6 +424,12 @@ export default function NewLeadPage() {
   const gpsLng = step1Form.watch("gpsLongitude");
   const visitLoc = step1Form.watch("visitLocation");
   const gpsCaptured = gpsLat != null && gpsLng != null;
+  // GPS + visit location are all required now — block Save & Continue until
+  // they've resolved (including while the reverse-geocoded address, or a
+  // manually-typed address being forward-geocoded, is still being fetched).
+  const locationReady = gpsCaptured && !!visitLoc?.trim() && !reverseGeocode.isPending && !forwardGeocode.isPending;
+  const remarksValue = step1Form.watch("remarks") ?? "";
+  const discussionNoteValue = step2Form.watch("discussionNote") ?? "";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-12">
@@ -404,7 +448,7 @@ export default function NewLeadPage() {
 
       <div className="space-y-4 px-1">
         {/* ---- Locked Step 1 summary ---- */}
-        {savedStep1 && (
+        {savedStep1 && leadId && (
           <LockedStepCard stepNumber={1} title="Site Visit">
             <p>
               <span className="font-medium text-foreground">{savedStep1.companyName}</span>
@@ -415,11 +459,21 @@ export default function NewLeadPage() {
                 <MapPin className="size-3" /> {savedStep1.visitLocation}
               </p>
             )}
+            {(followUpsAt("NEW_LEAD").length > 0 || meetingsAt("NEW_LEAD").length > 0) && (
+              <div className="mt-3 space-y-2">
+                {followUpsAt("NEW_LEAD").length > 0 && <FollowUpTimeline followUps={followUpsAt("NEW_LEAD")} />}
+                {meetingsAt("NEW_LEAD").length > 0 && <MeetingTimeline meetings={meetingsAt("NEW_LEAD")} />}
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <LogFollowUpDialog leadId={leadId} />
+              <LogMeetingDialog leadId={leadId} />
+            </div>
           </LockedStepCard>
         )}
 
         {/* ---- Locked Step 2 summary ---- */}
-        {savedStep2 && (
+        {savedStep2 && leadId && (
           <LockedStepCard stepNumber={2} title="Contact Details">
             <p className="font-medium text-foreground">{savedStep2.contactName}</p>
             <p>
@@ -427,6 +481,16 @@ export default function NewLeadPage() {
               {savedStep2.contactPhone && savedStep2.contactEmail && <span> · </span>}
               {savedStep2.contactEmail && <span>{savedStep2.contactEmail}</span>}
             </p>
+            {(followUpsAt("CONTACTED").length > 0 || meetingsAt("CONTACTED").length > 0) && (
+              <div className="mt-3 space-y-2">
+                {followUpsAt("CONTACTED").length > 0 && <FollowUpTimeline followUps={followUpsAt("CONTACTED")} />}
+                {meetingsAt("CONTACTED").length > 0 && <MeetingTimeline meetings={meetingsAt("CONTACTED")} />}
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <LogFollowUpDialog leadId={leadId} />
+              <LogMeetingDialog leadId={leadId} />
+            </div>
           </LockedStepCard>
         )}
 
@@ -456,13 +520,24 @@ export default function NewLeadPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="remarks">Remarks / Observation</Label>
+                  <Label htmlFor="remarks">Remarks / Observation *</Label>
                   <Textarea
                     id="remarks"
                     placeholder="Any observations from the visit..."
                     rows={3}
+                    maxLength={400}
                     {...step1Form.register("remarks")}
                   />
+                  <div className="flex items-center justify-between">
+                    {step1Form.formState.errors.remarks ? (
+                      <p className="text-sm text-destructive">
+                        {step1Form.formState.errors.remarks.message}
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <p className="text-xs text-muted-foreground">{remarksValue.length}/400</p>
+                  </div>
                 </div>
 
                 {/* GPS Location */}
@@ -539,16 +614,27 @@ export default function NewLeadPage() {
                           <Input
                             id="visitLocation"
                             placeholder="e.g. Sector 44, Gurugram"
-                            {...step1Form.register("visitLocation")}
+                            {...step1Form.register("visitLocation", { onBlur: handleManualLocationBlur })}
                           />
+                          {forwardGeocode.isPending && (
+                            <p className="text-xs text-muted-foreground">Resolving coordinates for this address…</p>
+                          )}
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={createStep1.isPending}>
-                  {createStep1.isPending ? "Saving…" : "Save & Continue"}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={createStep1.isPending || !locationReady}
+                >
+                  {createStep1.isPending
+                    ? "Saving…"
+                    : !locationReady
+                      ? "Waiting for location…"
+                      : "Save & Continue"}
                 </Button>
               </form>
             </CardContent>
@@ -582,7 +668,7 @@ export default function NewLeadPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="contactPhone">Contact Number</Label>
+                    <Label htmlFor="contactPhone">Contact Number *</Label>
                     <Input
                       id="contactPhone"
                       type="tel"
@@ -612,16 +698,28 @@ export default function NewLeadPage() {
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">At least one of phone or email is required.</p>
 
                 <div className="space-y-2">
-                  <Label htmlFor="discussionNote">Discussion Note</Label>
+                  <Label htmlFor="discussionNote">Discussion Note *</Label>
                   <Textarea
                     id="discussionNote"
                     placeholder="Notes from the conversation..."
                     rows={3}
+                    maxLength={400}
                     {...step2Form.register("discussionNote")}
                   />
+                  <div className="flex items-center justify-between">
+                    {step2Form.formState.errors.discussionNote ? (
+                      <p className="text-sm text-destructive">
+                        {step2Form.formState.errors.discussionNote.message}
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {discussionNoteValue.length}/400
+                    </p>
+                  </div>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={saveStep2.isPending}>
@@ -742,6 +840,7 @@ export default function NewLeadPage() {
                     <Input
                       id="followUpDate"
                       type="date"
+                      min={todayDateInputValue()}
                       value={followUpDate}
                       onChange={(e) => setFollowUpDate(e.target.value)}
                     />
@@ -813,6 +912,7 @@ export default function NewLeadPage() {
                           <Input
                             id="quotationDate"
                             type="date"
+                            min={todayDateInputValue()}
                             value={quotationDate}
                             onChange={(e) => setQuotationDate(e.target.value)}
                           />

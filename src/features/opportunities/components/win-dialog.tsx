@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -25,19 +28,28 @@ import {
 } from "@/components/ui/dialog";
 import { useWinOpportunity } from "@/features/opportunities/hooks";
 import { useAllCatalogItems } from "@/features/catalog/hooks";
+import { useReverseGeocode } from "@/features/geo/hooks";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { DealType } from "@/types/entities";
 
-interface FormValues {
-  site: string;
-  timeline: string;
-  customerId: string;
-  bom: { catalogItemId: string; qty: number }[];
-  amcType: "COMPREHENSIVE" | "NON_COMPREHENSIVE";
-  amcFrequency: "MONTHLY" | "QUARTERLY" | "ANNUAL";
-  amcStartDate: string;
-  amcEndDate: string;
-}
+const formSchema = z.object({
+  poNumber: z.string().min(1, "PO number is required"),
+  poDate: z.string().min(1, "PO date is required"),
+  poAmount: z
+    .number({ error: "PO amount is required" })
+    .positive("PO amount must be a positive number"),
+  poRemarks: z.string().optional(),
+  site: z.string(),
+  timeline: z.string(),
+  customerId: z.string(),
+  bom: z.array(z.object({ catalogItemId: z.string(), qty: z.number() })),
+  amcType: z.enum(["COMPREHENSIVE", "NON_COMPREHENSIVE"]),
+  amcFrequency: z.enum(["MONTHLY", "QUARTERLY", "ANNUAL"]),
+  amcStartDate: z.string(),
+  amcEndDate: z.string(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export function WinDialog({
   opportunityId,
@@ -54,23 +66,70 @@ export function WinDialog({
   const [open, setOpen] = useState(false);
   const winOpportunity = useWinOpportunity(opportunityId);
   const { data: catalogItems } = useAllCatalogItems();
+  const reverseGeocode = useReverseGeocode();
 
-  const { register, control, handleSubmit, watch, setValue } =
-    useForm<FormValues>({
-      defaultValues: {
-        site: "",
-        timeline: "",
-        customerId: "",
-        bom: [],
-        amcType: "COMPREHENSIVE",
-        amcFrequency: "MONTHLY",
-        amcStartDate: "",
-        amcEndDate: "",
-      },
-    });
+  // Captured silently in the background while the dialog is open — no
+  // visible lat/lng inputs, same pattern as the Meeting dialog and Step 1's
+  // GPS auto-capture in the new-lead wizard.
+  const [poGps, setPoGps] = useState<{ lat?: number; lng?: number; location?: string }>({});
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      poNumber: "",
+      poDate: "",
+      poAmount: 0,
+      poRemarks: "",
+      site: "",
+      timeline: "",
+      customerId: "",
+      bom: [],
+      amcType: "COMPREHENSIVE",
+      amcFrequency: "MONTHLY",
+      amcStartDate: "",
+      amcEndDate: "",
+    },
+  });
 
   const { fields, append, remove } = useFieldArray({ control, name: "bom" });
   const isAmc = dealType === "AMC";
+
+  useEffect(() => {
+    if (!open) return;
+    setPoGps({});
+    if (!navigator.geolocation) return;
+    if (typeof window !== "undefined" && !window.isSecureContext) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setPoGps({ lat: latitude, lng: longitude });
+        reverseGeocode.mutate(
+          { lat: latitude, lng: longitude },
+          {
+            onSuccess: (result) => {
+              const address = result.address;
+              if (address) {
+                setPoGps((prev) => ({ ...prev, location: address }));
+              }
+            },
+          },
+        );
+      },
+      () => {
+        // Silent — GPS is best-effort; a PO can still be captured without it.
+      },
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const catalogItemOptions: ComboboxOption[] = useMemo(
     () =>
@@ -90,6 +149,13 @@ export function WinDialog({
   async function onSubmit(values: FormValues) {
     try {
       await winOpportunity.mutateAsync({
+        poNumber: values.poNumber,
+        poDate: new Date(values.poDate).toISOString(),
+        poAmount: values.poAmount,
+        poRemarks: values.poRemarks || undefined,
+        poGpsLatitude: poGps.lat,
+        poGpsLongitude: poGps.lng,
+        poLocation: poGps.location,
         site: values.site || undefined,
         timeline: values.timeline || undefined,
         customerId: values.customerId || undefined,
@@ -103,7 +169,7 @@ export function WinDialog({
           ? new Date(values.amcEndDate).toISOString()
           : undefined,
       });
-      toast.success("Opportunity won!");
+      toast.success("Purchase Order captured — opportunity won!");
       setOpen(false);
     } catch (error) {
       toast.error(getApiErrorMessage(error));
@@ -117,9 +183,45 @@ export function WinDialog({
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Close Won</DialogTitle>
+          <DialogTitle>Close Won — Purchase Order</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-4 rounded-md border p-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="poNumber">PO Number *</Label>
+                <Input id="poNumber" placeholder="PO-2026-0042" {...register("poNumber")} />
+                {errors.poNumber ? (
+                  <p className="text-sm text-destructive">{errors.poNumber.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="poDate">PO Date *</Label>
+                <Input id="poDate" type="date" {...register("poDate")} />
+                {errors.poDate ? (
+                  <p className="text-sm text-destructive">{errors.poDate.message}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="poAmount">PO Amount (₹) *</Label>
+              <Input
+                id="poAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 150000"
+                {...register("poAmount", { valueAsNumber: true })}
+              />
+              {errors.poAmount ? (
+                <p className="text-sm text-destructive">{errors.poAmount.message}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="poRemarks">PO Remarks</Label>
+              <Textarea id="poRemarks" rows={2} {...register("poRemarks")} />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="customerId">Customer ID</Label>
             <Input id="customerId" {...register("customerId")} />

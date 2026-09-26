@@ -21,43 +21,33 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import type { Opportunity, OpportunityStage } from "@/types/entities";
 import type { OpportunityPipelineSummary } from "@/features/opportunities/api";
 
+// Mirrors the old QUOTED -> NEGOTIATION -> MEETING chain under the renamed
+// stages. Note the backend now also auto-advances QUOTATION -> FOLLOWUP and
+// QUOTATION/FOLLOWUP -> MEETING as a side-effect of logging a follow-up/meeting
+// (POST /leads/:id/follow-ups, /meetings) — this manual button is a shortcut
+// for moving the stage forward explicitly before either log action happens.
+// There's no manual entry for MEETING here (same as before, when MEETING had
+// no entry to WON) since reaching PURCHASE_ORDER requires the Win dialog's
+// required PO fields.
 const NEXT_STAGE: Partial<Record<OpportunityStage, OpportunityStage>> = {
-  NEW: "CONTACTED",
-  CONTACTED: "QUALIFIED",
-  QUALIFIED: "QUOTED",
-  QUOTED: "NEGOTIATION",
-  NEGOTIATION: "MEETING",
+  QUOTATION: "FOLLOWUP",
+  FOLLOWUP: "MEETING",
 };
 
-const CAN_WIN: OpportunityStage[] = ["QUOTED", "NEGOTIATION", "MEETING"];
-const CAN_LOSE: OpportunityStage[] = ["NEW", "CONTACTED", "QUALIFIED", "QUOTED", "NEGOTIATION", "MEETING"];
+const CAN_WIN: OpportunityStage[] = ["QUOTATION", "FOLLOWUP", "MEETING"];
+const CAN_LOSE: OpportunityStage[] = ["QUOTATION", "FOLLOWUP", "MEETING"];
 
 const STAGE_META: Record<
   OpportunityStage,
   { label: string; accent: string; chip: string }
 > = {
-  NEW: {
-    label: "New Visit / Lead",
-    accent: "bg-info",
-    chip: "bg-info/10 text-info dark:bg-info/15",
-  },
-  CONTACTED: {
-    label: "Contacted",
-    accent: "bg-purple",
-    chip: "bg-purple/10 text-purple dark:bg-purple/15",
-  },
-  QUALIFIED: {
-    label: "Qualified",
-    accent: "bg-teal",
-    chip: "bg-teal/10 text-teal dark:bg-teal/15",
-  },
-  QUOTED: {
+  QUOTATION: {
     label: "Quotation",
     accent: "bg-warning",
     chip: "bg-warning/15 text-warning-foreground dark:bg-warning/20 dark:text-warning",
   },
-  NEGOTIATION: {
-    label: "Follow-ups",
+  FOLLOWUP: {
+    label: "Follow-up",
     accent: "bg-orange-500",
     chip: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
   },
@@ -66,8 +56,8 @@ const STAGE_META: Record<
     accent: "bg-indigo-500",
     chip: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
   },
-  WON: {
-    label: "PO (Purchase Order)",
+  PURCHASE_ORDER: {
+    label: "Purchase Order",
     accent: "bg-success",
     chip: "bg-success/10 text-success dark:bg-success/15",
   },
@@ -78,7 +68,7 @@ const STAGE_META: Record<
   },
 };
 
-const STAGES: OpportunityStage[] = ["NEW", "CONTACTED", "QUALIFIED", "QUOTED", "NEGOTIATION", "MEETING", "WON"];
+const STAGES: OpportunityStage[] = ["QUOTATION", "FOLLOWUP", "MEETING", "PURCHASE_ORDER"];
 
 const DEAL_TYPE_META: Record<Opportunity["dealType"], { label: string; icon: typeof Wrench }> = {
   INSTALLATION: { label: "Installation", icon: Wrench },
@@ -102,7 +92,7 @@ function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
   const isOverdue =
     !!opportunity.expectedClose &&
     new Date(opportunity.expectedClose) < new Date() &&
-    opportunity.stage !== "WON" &&
+    opportunity.stage !== "PURCHASE_ORDER" &&
     opportunity.stage !== "LOST";
 
   async function advance() {

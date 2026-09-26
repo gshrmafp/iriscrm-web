@@ -10,3 +10,19 @@ export async function reverseGeocode(lat: number, lng: number): Promise<ReverseG
   });
   return data;
 }
+
+export interface ForwardGeocodeResult {
+  lat: number;
+  lng: number;
+  address: string;
+}
+
+// Turns a manually-typed address into a lat/lng pair — used when GPS is
+// unavailable/denied but the user still types a location, since the Lead's
+// gpsLatitude/gpsLongitude are required alongside visitLocation.
+export async function forwardGeocode(query: string): Promise<ForwardGeocodeResult | null> {
+  const { data } = await apiClient.get<ForwardGeocodeResult | null>("/geo/forward-geocode", {
+    params: { q: query },
+  });
+  return data;
+}

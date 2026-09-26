@@ -33,7 +33,7 @@ export default function OpportunityDetailPage({
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
 
-  const isActive = opportunity.stage !== "WON" && opportunity.stage !== "LOST";
+  const isActive = opportunity.stage !== "PURCHASE_ORDER" && opportunity.stage !== "LOST";
 
   return (
     <div>

@@ -6,3 +6,9 @@ export function useReverseGeocode() {
     mutationFn: ({ lat, lng }: { lat: number; lng: number }) => api.reverseGeocode(lat, lng),
   });
 }
+
+export function useForwardGeocode() {
+  return useMutation({
+    mutationFn: (query: string) => api.forwardGeocode(query),
+  });
+}

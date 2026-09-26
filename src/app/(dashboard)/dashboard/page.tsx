@@ -44,27 +44,22 @@ const TONE_ICON_CLASSES: Record<Tone, string> = {
   teal: "bg-teal/10 text-teal",
 };
 
-// Per-stage accent so all six pipeline stages read as visually distinct,
-// rather than reusing the same 4 generic status tones.
+// Per-stage accent so the pipeline stages read as visually distinct, rather
+// than reusing the same 4 generic status tones. Matches pipeline-board.tsx's
+// STAGE_META colors.
 const STAGE_ACCENT: Record<OpportunityStage, { tone: Tone; bar: string; badge: "info" | "purple" | "warning" | "teal" | "success" | "danger" }> = {
-  NEW: { tone: "info", bar: "bg-info", badge: "info" },
-  CONTACTED: { tone: "purple", bar: "bg-purple", badge: "purple" },
-  QUALIFIED: { tone: "teal", bar: "bg-teal", badge: "teal" },
-  QUOTED: { tone: "warning", bar: "bg-warning", badge: "warning" },
-  NEGOTIATION: { tone: "warning", bar: "bg-orange-500", badge: "warning" },
+  QUOTATION: { tone: "warning", bar: "bg-warning", badge: "warning" },
+  FOLLOWUP: { tone: "warning", bar: "bg-orange-500", badge: "warning" },
   MEETING: { tone: "purple", bar: "bg-indigo-500", badge: "purple" },
-  WON: { tone: "success", bar: "bg-success", badge: "success" },
+  PURCHASE_ORDER: { tone: "success", bar: "bg-success", badge: "success" },
   LOST: { tone: "danger", bar: "bg-danger", badge: "danger" },
 };
 
 const STAGE_LABELS: Record<OpportunityStage, string> = {
-  NEW: "New Visit",
-  CONTACTED: "Contacted",
-  QUALIFIED: "Qualified",
-  QUOTED: "Quotation",
-  NEGOTIATION: "Follow-ups",
+  QUOTATION: "Quotation",
+  FOLLOWUP: "Follow-up",
   MEETING: "Meeting",
-  WON: "PO",
+  PURCHASE_ORDER: "PO",
   LOST: "Lost",
 };
 

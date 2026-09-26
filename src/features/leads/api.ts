@@ -1,22 +1,16 @@
 import { apiClient } from "@/lib/api-client";
 import type { paths } from "@/types/api.generated";
-import type { FollowUp, Lead, LeadStatus, Opportunity } from "@/types/entities";
+import type { FollowUp, Lead, LeadMeeting, LeadStatus, Opportunity } from "@/types/entities";
 
-type CreateLeadPayload =
-  paths["/leads"]["post"]["requestBody"]["content"]["application/json"];
 type LogFollowUpPayload =
   paths["/leads/{id}/follow-ups"]["post"]["requestBody"]["content"]["application/json"];
-type MarkLeadLostPayload =
-  paths["/leads/{id}/lost"]["post"]["requestBody"]["content"]["application/json"];
-type QualifyLeadPayload =
-  paths["/leads/{id}/qualify"]["post"]["requestBody"]["content"]["application/json"];
+type LogMeetingPayload =
+  paths["/leads/{id}/meetings"]["post"]["requestBody"]["content"]["application/json"];
 
-export type { CreateLeadPayload, LogFollowUpPayload, MarkLeadLostPayload, QualifyLeadPayload };
+export type { LogFollowUpPayload, LogMeetingPayload };
 
 export interface ListLeadsFilters {
   status?: LeadStatus;
-  source?: string;
-  productInterest?: string;
   ownerId?: string;
   search?: string;
   dateFrom?: string;
@@ -56,11 +50,6 @@ export async function getLead(id: string): Promise<Lead> {
   return data;
 }
 
-export async function createLead(payload: CreateLeadPayload): Promise<Lead> {
-  const { data } = await apiClient.post<{ lead: Lead }>("/leads", payload);
-  return data.lead;
-}
-
 export async function logFollowUp(
   id: string,
   payload: LogFollowUpPayload,
@@ -72,20 +61,12 @@ export async function logFollowUp(
   return data;
 }
 
-export async function markLeadLost(
+export async function logMeeting(
   id: string,
-  payload: MarkLeadLostPayload,
-): Promise<Lead> {
-  const { data } = await apiClient.post<Lead>(`/leads/${id}/lost`, payload);
-  return data;
-}
-
-export async function qualifyLead(
-  id: string,
-  payload: QualifyLeadPayload,
-): Promise<Opportunity> {
-  const { data } = await apiClient.post<Opportunity>(
-    `/leads/${id}/qualify`,
+  payload: LogMeetingPayload,
+): Promise<LeadMeeting> {
+  const { data } = await apiClient.post<LeadMeeting>(
+    `/leads/${id}/meetings`,
     payload,
   );
   return data;
@@ -95,17 +76,17 @@ export async function qualifyLead(
 
 export interface Step1Payload {
   companyName: string;
-  remarks?: string;
-  gpsLatitude?: number;
-  gpsLongitude?: number;
-  visitLocation?: string;
+  remarks: string;
+  gpsLatitude: number;
+  gpsLongitude: number;
+  visitLocation: string;
 }
 
 export interface Step2Payload {
   contactName: string;
-  contactPhone?: string;
+  contactPhone: string;
   contactEmail?: string;
-  discussionNote?: string;
+  discussionNote: string;
 }
 
 export type Step3Payload =

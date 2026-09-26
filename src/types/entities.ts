@@ -69,6 +69,19 @@ export interface PicklistOption {
 
 export type LeadStatus = "NEW" | "QUALIFIED" | "LOST";
 
+// Snapshot of which of the 7 named lifecycle stages was active at the exact
+// moment a follow-up/meeting was logged. Set automatically by the backend
+// on every POST /leads/:id/follow-ups and POST /leads/:id/meetings call —
+// never sent by the client, only read back.
+export type LoggedAtStage =
+  | "NEW_LEAD"
+  | "CONTACTED"
+  | "QUOTATION"
+  | "FOLLOWUP"
+  | "MEETING"
+  | "PURCHASE_ORDER"
+  | "LOST";
+
 export interface FollowUp {
   id: string;
   leadId: string;
@@ -77,6 +90,19 @@ export interface FollowUp {
   nextActionAt?: string | null;
   createdBy: string;
   createdAt: string;
+  loggedAtStage?: LoggedAtStage | null;
+}
+
+export interface LeadMeeting {
+  id: string;
+  leadId: string;
+  note: string;
+  gpsLatitude?: number | string | null;
+  gpsLongitude?: number | string | null;
+  visitLocation?: string | null;
+  createdBy: string;
+  createdAt: string;
+  loggedAtStage?: LoggedAtStage | null;
 }
 
 export interface Lead {
@@ -86,15 +112,9 @@ export interface Lead {
   companyName?: string;
   contactPhone?: string;
   contactEmail?: string;
-  address?: string | null;
   gpsLatitude?: number | string | null;
   gpsLongitude?: number | string | null;
   visitLocation?: string | null;
-  source?: LeadSource | null;
-  sourceOther?: string | null;
-  productInterest?: string;
-  productInterestOther?: string | null;
-  notes?: string;
   status: LeadStatus;
   lostReason?: string | null;
   currentStep?: number;
@@ -110,19 +130,17 @@ export interface Lead {
   createdAt: string;
   updatedAt: string;
   followUps?: FollowUp[];
+  meetings?: LeadMeeting[];
   opportunity?: Opportunity | null;
 }
 
 export type DealType = "INSTALLATION" | "AMC" | "PRODUCT" | "MAINTENANCE";
 
 export type OpportunityStage =
-  | "NEW"
-  | "CONTACTED"
-  | "QUALIFIED"
-  | "QUOTED"
-  | "NEGOTIATION"
+  | "QUOTATION"
+  | "FOLLOWUP"
   | "MEETING"
-  | "WON"
+  | "PURCHASE_ORDER"
   | "LOST";
 
 export interface StageHistoryEntry {
@@ -152,6 +170,13 @@ export interface Opportunity {
   initialQuotationRef?: string | null;
   initialQuotationDate?: string | null;
   initialQuotationAmount?: string | null;
+  poNumber?: string | null;
+  poDate?: string | null;
+  poRemarks?: string | null;
+  poGpsLatitude?: number | string | null;
+  poGpsLongitude?: number | string | null;
+  poLocation?: string | null;
+  poAmount?: string | null;
   stageHistory?: StageHistoryEntry[];
   quotations?: Quotation[];
 }
