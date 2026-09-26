@@ -198,22 +198,6 @@ export default function NewLeadPage() {
   const reverseGeocode = useReverseGeocode();
   const forwardGeocode = useForwardGeocode();
 
-  // GPS is unavailable (denied, no hardware, indoors) but the user typed an
-  // address by hand — forward-geocode it in the background to still fill in
-  // gpsLatitude/gpsLongitude, since both are required alongside visitLocation.
-  function handleManualLocationBlur() {
-    const typed = step1Form.getValues("visitLocation")?.trim();
-    const hasGps = step1Form.getValues("gpsLatitude") != null && step1Form.getValues("gpsLongitude") != null;
-    if (!typed || hasGps || forwardGeocode.isPending) return;
-    forwardGeocode.mutate(typed, {
-      onSuccess: (result) => {
-        if (!result) return;
-        step1Form.setValue("gpsLatitude", result.lat, { shouldValidate: true });
-        step1Form.setValue("gpsLongitude", result.lng, { shouldValidate: true });
-      },
-    });
-  }
-
   // Step 1 form
   const step1Form = useForm<Step1Values>({
     resolver: zodResolver(step1Schema),
@@ -428,6 +412,26 @@ export default function NewLeadPage() {
   // they've resolved (including while the reverse-geocoded address, or a
   // manually-typed address being forward-geocoded, is still being fetched).
   const locationReady = gpsCaptured && !!visitLoc?.trim() && !reverseGeocode.isPending && !forwardGeocode.isPending;
+
+  // GPS is unavailable (denied, no hardware, indoors) but the user typed an
+  // address by hand — forward-geocode it in the background, debounced as they
+  // type, so gpsLatitude/gpsLongitude (both required alongside visitLocation)
+  // get filled in without depending on a blur/focus-change event firing.
+  useEffect(() => {
+    const typed = visitLoc?.trim();
+    if (!typed || gpsCaptured) return;
+    const timer = setTimeout(() => {
+      forwardGeocode.mutate(typed, {
+        onSuccess: (result) => {
+          if (!result) return;
+          step1Form.setValue("gpsLatitude", result.lat, { shouldValidate: true });
+          step1Form.setValue("gpsLongitude", result.lng, { shouldValidate: true });
+        },
+      });
+    }, 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visitLoc, gpsCaptured]);
   const remarksValue = step1Form.watch("remarks") ?? "";
   const discussionNoteValue = step2Form.watch("discussionNote") ?? "";
 
@@ -609,12 +613,12 @@ export default function NewLeadPage() {
                         </Button>
                         <div className="space-y-1.5 pt-1">
                           <Label htmlFor="visitLocation" className="text-xs text-muted-foreground">
-                            Or type it in
+                            Or type the address in — we'll look up its coordinates automatically
                           </Label>
                           <Input
                             id="visitLocation"
                             placeholder="e.g. Sector 44, Gurugram"
-                            {...step1Form.register("visitLocation", { onBlur: handleManualLocationBlur })}
+                            {...step1Form.register("visitLocation")}
                           />
                           {forwardGeocode.isPending && (
                             <p className="text-xs text-muted-foreground">Resolving coordinates for this address…</p>
