@@ -31,6 +31,7 @@ import {
   useUser,
   useUserDirectory,
 } from "@/features/identity/hooks";
+import { ResetPasswordCard } from "@/features/identity/components/reset-password-card";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { ROLES } from "@/lib/permissions";
 import type { Role } from "@/types/entities";
@@ -135,6 +136,7 @@ export default function UserDetailsPage({
 
   const isSelf = user.id === currentUser?.id;
   const isActive = user.status === "ACTIVE";
+  const canResetPassword = currentUser?.role === "SUPER_ADMIN" && !isSelf;
 
   return (
     <div className="space-y-6">
@@ -179,71 +181,74 @@ export default function UserDetailsPage({
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Profile</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" {...register("name")} />
-                {errors.name ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" {...register("email")} />
-                {errors.email ? <p className="text-sm text-destructive">{errors.email.message}</p> : null}
-              </div>
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <Select
-                  value={watch("role") ?? user.role}
-                  onValueChange={(value) => setValue("role", value as Role, { shouldDirty: true })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLE_OPTIONS.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {ROLES[role].label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Region</Label>
-                <Combobox
-                  items={regionOptions}
-                  value={watch("regionId") || null}
-                  onValueChange={(value) => setValue("regionId", value ?? "", { shouldValidate: true, shouldDirty: true })}
-                  placeholder="Search a region…"
-                  emptyMessage="No regions found."
-                />
-                {errors.regionId ? (
-                  <p className="text-sm text-destructive">{errors.regionId.message}</p>
-                ) : null}
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Reports to (optional)</Label>
-                <Combobox
-                  items={managerOptions}
-                  value={watch("reportingToId") || null}
-                  onValueChange={(value) => setValue("reportingToId", value ?? undefined, { shouldDirty: true })}
-                  placeholder="Search by name or email…"
-                  emptyMessage="No employees found."
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Button type="submit" disabled={updateUser.isPending || !isDirty}>
-                  {updateUser.isPending ? "Saving…" : "Save changes"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <div className="space-y-6 md:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Profile</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" {...register("name")} />
+                  {errors.name ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" {...register("email")} />
+                  {errors.email ? <p className="text-sm text-destructive">{errors.email.message}</p> : null}
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select
+                    value={watch("role") ?? user.role}
+                    onValueChange={(value) => setValue("role", value as Role, { shouldDirty: true })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {ROLES[role].label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Region</Label>
+                  <Combobox
+                    items={regionOptions}
+                    value={watch("regionId") || null}
+                    onValueChange={(value) => setValue("regionId", value ?? "", { shouldValidate: true, shouldDirty: true })}
+                    placeholder="Search a region…"
+                    emptyMessage="No regions found."
+                  />
+                  {errors.regionId ? (
+                    <p className="text-sm text-destructive">{errors.regionId.message}</p>
+                  ) : null}
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Reports to (optional)</Label>
+                  <Combobox
+                    items={managerOptions}
+                    value={watch("reportingToId") || null}
+                    onValueChange={(value) => setValue("reportingToId", value ?? undefined, { shouldDirty: true })}
+                    placeholder="Search by name or email…"
+                    emptyMessage="No employees found."
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Button type="submit" disabled={updateUser.isPending || !isDirty}>
+                    {updateUser.isPending ? "Saving…" : "Save changes"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+          {canResetPassword ? <ResetPasswordCard userId={user.id} userName={user.name} /> : null}
+        </div>
       </div>
     </div>
   );

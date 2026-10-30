@@ -86,6 +86,12 @@ export function useUpdateUser(userId: string) {
   });
 }
 
+export function useResetUserPassword(userId: string) {
+  return useMutation({
+    mutationFn: (newPassword: string) => api.resetUserPassword(userId, { newPassword }),
+  });
+}
+
 export function useEffectivePermissions(userId: string) {
   return useQuery({
     queryKey: identityKeys.permissions(userId),

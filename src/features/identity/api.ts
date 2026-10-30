@@ -99,6 +99,16 @@ export async function updateUser(id: string, payload: UpdateUserPayload): Promis
   return data;
 }
 
+// Super Admin only. Overwrites the stored hash — the old password is never
+// readable, so there is no matching "get password" call.
+export async function resetUserPassword(
+  id: string,
+  payload: { newPassword: string },
+): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>(`/users/${id}/password`, payload);
+  return data;
+}
+
 export async function getEffectivePermissions(
   userId: string,
 ): Promise<EffectivePermissions> {
