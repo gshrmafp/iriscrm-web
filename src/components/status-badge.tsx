@@ -31,6 +31,15 @@ export function leadStatusTone(status: string) {
   return "info" as const;
 }
 
+export function employeeStatusTone(status: string) {
+  if (status === "CONFIRMED") return "success" as const;
+  if (status === "PROBATION") return "info" as const;
+  if (status === "ONBOARDING") return "purple" as const;
+  if (status === "NOTICE") return "warning" as const;
+  if (status === "EXITED") return "neutral" as const;
+  return "info" as const;
+}
+
 export function opportunityStageTone(stage: string) {
   if (stage === "PURCHASE_ORDER") return "success" as const;
   if (stage === "LOST") return "danger" as const;

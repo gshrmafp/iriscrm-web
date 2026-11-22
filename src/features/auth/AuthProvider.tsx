@@ -56,7 +56,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const tokens = await loginRequest(payload);
       setTokens(tokens);
       setUser(tokens.user);
-      router.push("/dashboard");
+      // HR Admins have no Sales access — land them in HRMS.
+      router.push(tokens.user.role === "HR_ADMIN" ? "/hr/employees" : "/dashboard");
     },
     [router],
   );

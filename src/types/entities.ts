@@ -11,7 +11,8 @@ export type Role =
   | "REGIONAL_ADMIN"
   | "SALES_MANAGER"
   | "SALES_EXECUTIVE"
-  | "AUDITOR";
+  | "AUDITOR"
+  | "HR_ADMIN";
 
 export interface Region {
   id: string;
@@ -544,4 +545,164 @@ export interface Notification {
   body?: string | null;
   readAt?: string | null;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// HRMS
+// ---------------------------------------------------------------------------
+
+export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN" | "CONSULTANT";
+export type EmployeeLifecycleStatus = "ONBOARDING" | "PROBATION" | "CONFIRMED" | "NOTICE" | "EXITED";
+export type Gender = "MALE" | "FEMALE" | "OTHER" | "UNDISCLOSED";
+export type HrDocumentCategory =
+  | "RESUME"
+  | "OFFER_LETTER"
+  | "APPOINTMENT_LETTER"
+  | "ID_PROOF"
+  | "ADDRESS_PROOF"
+  | "EDUCATION"
+  | "EXPERIENCE"
+  | "POLICY"
+  | "OTHER";
+
+export interface Designation {
+  id: string;
+  code: string;
+  name: string;
+  level?: number | null;
+  active: boolean;
+}
+
+// Employee code = user.id (e.g. EMP042).
+export interface Employee {
+  id: string;
+  userId: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+    status: "ACTIVE" | "INACTIVE";
+    regionId: string;
+    region: { id: string; code: string; name: string };
+    reportingTo: { id: string; name: string } | null;
+  };
+  phone?: string | null;
+  personalEmail?: string | null;
+  dateOfBirth?: string | null;
+  gender?: Gender | null;
+  currentAddress?: string | null;
+  permanentAddress?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  emergencyContactRel?: string | null;
+  designationId?: string | null;
+  designation?: { id: string; code: string; name: string } | null;
+  departmentId?: string | null;
+  department?: { id: string; code: string; name: string } | null;
+  employmentType: EmploymentType;
+  lifecycleStatus: EmployeeLifecycleStatus;
+  joiningDate?: string | null;
+  probationStartsOn?: string | null;
+  probationEndsOn?: string | null;
+  confirmedOn?: string | null;
+  noticePeriodDays?: number | null;
+  exitDate?: string | null;
+  workLocation?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeStatutory {
+  employeeId: string;
+  masked: boolean;
+  bankName: string | null;
+  ifsc: string | null;
+  bankAccount: string | null;
+  pan: string | null;
+  aadhaar: string | null;
+  uan: string | null;
+  pfNumber: string | null;
+  esiNumber: string | null;
+  updatedAt: string | null;
+}
+
+export interface EmployeeLifecycleEvent {
+  id: string;
+  eventType: string;
+  fromValue: string | null;
+  toValue: string | null;
+  // Display names resolved by the API (department, designation, branch, manager).
+  fromLabel: string | null;
+  toLabel: string | null;
+  actorName: string | null;
+  effectiveDate: string;
+  note: string | null;
+  actorId: string;
+  createdAt: string;
+}
+
+export interface HrDocument {
+  id: string;
+  category: HrDocumentCategory;
+  title: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedById: string;
+  verifiedById: string | null;
+  verifiedAt: string | null;
+  createdAt: string;
+}
+
+export type OnboardingTaskOwner = "HR" | "MANAGER" | "EMPLOYEE";
+
+export interface OnboardingTask {
+  id: string;
+  employeeId: string;
+  title: string;
+  description?: string | null;
+  owner: OnboardingTaskOwner;
+  dueDate?: string | null;
+  sortOrder: number;
+  doneAt?: string | null;
+  doneById?: string | null;
+  createdAt: string;
+}
+
+export interface OnboardingChecklist {
+  tasks: OnboardingTask[];
+  total: number;
+  done: number;
+}
+
+export interface OnboardingTemplateTask {
+  id: string;
+  templateId: string;
+  title: string;
+  description?: string | null;
+  owner: OnboardingTaskOwner;
+  dueOffsetDays: number;
+  sortOrder: number;
+}
+
+export interface OnboardingTemplate {
+  id: string;
+  name: string;
+  active: boolean;
+  tasks: OnboardingTemplateTask[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgChartNode {
+  employeeId: string;
+  userId: string;
+  name: string;
+  role: Role;
+  reportingToId: string | null;
+  lifecycleStatus: EmployeeLifecycleStatus;
+  designation: { id: string; name: string } | null;
+  department: { id: string; name: string } | null;
+  region: { id: string; name: string } | null;
 }

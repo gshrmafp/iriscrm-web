@@ -7,6 +7,7 @@ export const ROLES: Record<Role, { label: string }> = {
   SALES_MANAGER: { label: "Sales Manager" },
   SALES_EXECUTIVE: { label: "Sales Executive" },
   AUDITOR: { label: "Read-Only / Auditor" },
+  HR_ADMIN: { label: "HR Admin" },
 };
 
 export function isSuperAdmin(role?: Role): boolean {

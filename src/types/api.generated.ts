@@ -978,6 +978,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/journey-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Combined Lead+Opportunity 7-stage breakdown (count + recent leads per stage) for the Dashboard, optionally narrowed by owner and date range */
+        get: {
+            parameters: {
+                query?: {
+                    ownerId?: string;
+                    dateFrom?: string;
+                    dateTo?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description { stages: [{ stage, count, value?, recentLeads }], total } */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/team-performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-owner 7-stage lead breakdown visible to the caller, for the Dashboard's Team performance table */
+        get: {
+            parameters: {
+                query?: {
+                    dateFrom?: string;
+                    dateTo?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Array of { ownerId, counts: { NEW_LEAD, CONTACTED, QUALIFIED, QUOTATION, MEETING, PURCHASE_ORDER, LOST } } */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/follow-ups": {
         parameters: {
             query?: never;
@@ -2062,6 +2137,40 @@ export interface paths {
         };
         trace?: never;
     };
+    "/auth/me/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's own effective permission keys (role defaults plus overrides) — drives permission-aware navigation */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Array of permission keys */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/change-password": {
         parameters: {
             query?: never;
@@ -2158,7 +2267,7 @@ export interface paths {
                     pageSize?: number;
                     sortBy?: "createdAt" | "name" | "email";
                     sortOrder?: "asc" | "desc";
-                    role?: "SUPER_ADMIN" | "REGIONAL_ADMIN" | "SALES_MANAGER" | "SALES_EXECUTIVE" | "AUDITOR";
+                    role?: "SUPER_ADMIN" | "REGIONAL_ADMIN" | "SALES_MANAGER" | "SALES_EXECUTIVE" | "AUDITOR" | "HR_ADMIN";
                     regionId?: string;
                     status?: "ACTIVE" | "INACTIVE";
                     /** @description Matches name / email */
@@ -2201,7 +2310,7 @@ export interface paths {
                          * @example SALES_EXECUTIVE
                          * @enum {string}
                          */
-                        role: "SUPER_ADMIN" | "REGIONAL_ADMIN" | "SALES_MANAGER" | "SALES_EXECUTIVE" | "AUDITOR";
+                        role: "SUPER_ADMIN" | "REGIONAL_ADMIN" | "SALES_MANAGER" | "SALES_EXECUTIVE" | "AUDITOR" | "HR_ADMIN";
                         regionId: string;
                         reportingToId?: string;
                     };
@@ -2425,6 +2534,55 @@ export interface paths {
         };
         trace?: never;
     };
+    "/users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a new password for another user (Super Admin only). The existing password is never readable — it is stored hashed. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        newPassword: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Caller is not a Super Admin */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}": {
         parameters: {
             query?: never;
@@ -2474,7 +2632,7 @@ export interface paths {
                         name?: string;
                         email?: string;
                         /** @enum {string} */
-                        role?: "SUPER_ADMIN" | "REGIONAL_ADMIN" | "SALES_MANAGER" | "SALES_EXECUTIVE" | "AUDITOR";
+                        role?: "SUPER_ADMIN" | "REGIONAL_ADMIN" | "SALES_MANAGER" | "SALES_EXECUTIVE" | "AUDITOR" | "HR_ADMIN";
                         regionId?: string;
                         reportingToId?: string | null;
                     };
@@ -2490,6 +2648,763 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/hrms/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Onboard a new employee — creates the login, the employee record and the onboarding checklist in one transaction. Region-scoped HR can only onboard into their own region; Super Admin, Regional Admin and HR Admin roles can only be assigned by a Super Admin. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** Format: email */
+                        email: string;
+                        /** @description Temporary password */
+                        password: string;
+                        /** @enum {string} */
+                        role: "SUPER_ADMIN" | "REGIONAL_ADMIN" | "SALES_MANAGER" | "SALES_EXECUTIVE" | "AUDITOR" | "HR_ADMIN";
+                        regionId: string;
+                        reportingToId?: string | null;
+                        designationId?: string | null;
+                        departmentId?: string | null;
+                        /** @enum {string} */
+                        employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN" | "CONSULTANT";
+                        /** @enum {string} */
+                        lifecycleStatus?: "ONBOARDING" | "PROBATION" | "CONFIRMED";
+                        /** Format: date */
+                        joiningDate: string;
+                        /** Format: date */
+                        probationEndsOn?: string | null;
+                        noticePeriodDays?: number | null;
+                        workLocation?: string | null;
+                        phone?: string | null;
+                        personalEmail?: string | null;
+                        /** Format: date */
+                        dateOfBirth?: string | null;
+                        /** @enum {string|null} */
+                        gender?: "MALE" | "FEMALE" | "OTHER" | "UNDISCLOSED" | null;
+                        templateId?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created employee */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Email already in use */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/onboarding/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Onboarding checklist templates with their tasks */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Create an onboarding template */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OnboardingTemplateInput"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/onboarding/templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace an onboarding template's name, active flag and tasks. Checklists already given to employees are not changed. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OnboardingTemplateInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/employees/{id}/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The employee's onboarding checklist with progress */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description { tasks, total, done } */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Add an ad-hoc task to the checklist (HR) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        title: string;
+                        description?: string | null;
+                        /** @enum {string} */
+                        owner?: "HR" | "MANAGER" | "EMPLOYEE";
+                        /** Format: date */
+                        dueDate?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/employees/{id}/onboarding/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Mark a checklist task done or not done. HR can update any task, the manager MANAGER tasks, the employee their own EMPLOYEE tasks. */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    taskId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        done: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/hrms/employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Employee directory. Results are scoped — Super Admin sees all, HR/Regional Admin their region, everyone else themselves and their reporting tree. */
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    departmentId?: string;
+                    designationId?: string;
+                    regionId?: string;
+                    lifecycleStatus?: "ONBOARDING" | "PROBATION" | "CONFIRMED" | "NOTICE" | "EXITED";
+                    employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN" | "CONSULTANT";
+                    includeExited?: boolean;
+                    page?: number;
+                    pageSize?: number;
+                    sortBy?: "name" | "joiningDate" | "createdAt";
+                    sortOrder?: "asc" | "desc";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/employees/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's own employee record */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the caller's own contact details (phone, personal email, addresses, emergency contact) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        phone?: string | null;
+                        personalEmail?: string | null;
+                        currentAddress?: string | null;
+                        permanentAddress?: string | null;
+                        emergencyContactName?: string | null;
+                        emergencyContactPhone?: string | null;
+                        emergencyContactRel?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/hrms/employees/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One employee (by employee id or employee code such as EMP042), within the caller's scope */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found or outside the caller's scope */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** HR edit of personal and employment details. Department, designation, status and manager changes are recorded in the employment history; EXITED deactivates the login. */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        phone?: string | null;
+                        personalEmail?: string | null;
+                        currentAddress?: string | null;
+                        permanentAddress?: string | null;
+                        emergencyContactName?: string | null;
+                        emergencyContactPhone?: string | null;
+                        emergencyContactRel?: string | null;
+                        /** Format: date */
+                        dateOfBirth?: string | null;
+                        /** @enum {string|null} */
+                        gender?: "MALE" | "FEMALE" | "OTHER" | "UNDISCLOSED" | null;
+                        designationId?: string | null;
+                        departmentId?: string | null;
+                        reportingToId?: string | null;
+                        /** @enum {string} */
+                        employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN" | "CONSULTANT";
+                        /** @enum {string} */
+                        lifecycleStatus?: "ONBOARDING" | "PROBATION" | "CONFIRMED" | "NOTICE" | "EXITED";
+                        /** Format: date */
+                        joiningDate?: string | null;
+                        /** Format: date */
+                        probationStartsOn?: string | null;
+                        /** Format: date */
+                        probationEndsOn?: string | null;
+                        /** Format: date */
+                        confirmedOn?: string | null;
+                        noticePeriodDays?: number | null;
+                        /** Format: date */
+                        exitDate?: string | null;
+                        workLocation?: string | null;
+                        /** Format: date */
+                        effectiveDate?: string;
+                        note?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/hrms/employees/{id}/statutory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bank and statutory details. Masked for the employee themselves and for HR without hr.employee.sensitive.view. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        /** Set bank and statutory details (stored encrypted). null clears a field, omitted leaves it unchanged. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        bankName?: string | null;
+                        bankAccount?: string | null;
+                        ifsc?: string | null;
+                        pan?: string | null;
+                        aadhaar?: string | null;
+                        uan?: string | null;
+                        pfNumber?: string | null;
+                        esiNumber?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/employees/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Employment history (status, department, designation and manager changes), newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/employees/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An employee's HR documents (the employee themselves or HR) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Upload an HR document (PDF, image or Word, max 10 MB) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        file: string;
+                        /** @enum {string} */
+                        category: "RESUME" | "OFFER_LETTER" | "APPOINTMENT_LETTER" | "ID_PROOF" | "ADDRESS_PROOF" | "EDUCATION" | "EXPERIENCE" | "POLICY" | "OTHER";
+                        title: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/employees/{id}/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download an HR document */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    documentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description File */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Remove an HR document (HR only; kept for audit) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    documentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hrms/employees/{id}/documents/{documentId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark an HR document as verified (HR only) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    documentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/geo/reverse-geocode": {
@@ -2513,6 +3428,42 @@ export interface paths {
             requestBody?: never;
             responses: {
                 /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/geo/forward-geocode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Forward-geocode a typed address into a lat/lng pair (proxies OSM Nominatim) — used when GPS is unavailable and the address is entered manually */
+        get: {
+            parameters: {
+                query: {
+                    q: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description { lat, lng, address } or null if no match */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -2899,6 +3850,18 @@ export interface components {
             discount?: number;
             /** @example 18 */
             taxRatePct?: number;
+        };
+        OnboardingTemplateInput: {
+            name: string;
+            active?: boolean;
+            tasks: {
+                title: string;
+                description?: string | null;
+                /** @enum {string} */
+                owner?: "HR" | "MANAGER" | "EMPLOYEE";
+                /** @description Days after joining (negative = before) */
+                dueOffsetDays?: number;
+            }[];
         };
     };
     responses: never;
